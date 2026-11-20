@@ -92,12 +92,21 @@ Four questions, answered from the Step 1 change set:
    node -e 'const fs=require("fs"),p=require("path"),k=require("./package.json");for(const d of Object.keys({...k.dependencies,...k.devDependencies,...k.optionalDependencies})){try{const j=JSON.parse(fs.readFileSync(p.join("node_modules",d,"package.json"),"utf8"));const l=typeof j.license==="string"?j.license:(j.license||{}).type||"UNKNOWN";if(!/^(MIT|ISC|Apache-2\.0|BSD-[23]-Clause|0BSD|Unlicense|CC0-1\.0)$/.test(l))console.log(d,"->",l)}catch(e){console.log(d,"-> NOT INSTALLED")}}'
    ```
 
-   Silence means every dependency is permissive. (`NOT INSTALLED` lines are noise from an optional
-   platform-specific package, not a licensing finding.) The site's generator has a `package.json` of
-   its own, the repository's `ssg/package.json`: when that one changed, run the same command in that
-   folder.
+   Silence means every direct dependency is permissive. (`NOT INSTALLED` lines are noise from an
+   optional platform-specific package, not a licensing finding.) What the dependencies bring with
+   them is in the lockfile, which this reads:
 
-   Anything else it prints is a finding to **report, not to absorb**. A copyleft or source-available
+   ```bash
+   node -e 'const fs=require("fs"),P=JSON.parse(fs.readFileSync("package-lock.json","utf8")).packages,ok=/^(MIT|ISC|Apache-2\.0|BSD-[23]-Clause|0BSD|Unlicense|CC0-1\.0|BlueOak-1\.0\.0|MIT-0|Python-2\.0)$/,out=new Set();for(const n in P){if(!n)continue;let l=P[n].license;if(typeof l!=="string"){try{const j=JSON.parse(fs.readFileSync(n+"/package.json","utf8"));l=typeof j.license==="string"?j.license:(j.license||{}).type||(j.licenses||[]).map(x=>x.type).join(" OR ")||"UNKNOWN"}catch(e){l="UNKNOWN"}}if(!ok.test(l))out.add(n.replace(/^.*node_modules\//,"").replace(/-(darwin|linux|linuxmusl|win32|android|freebsd)(-[a-z0-9]+)*$/,"-*")+" -> "+l)}console.log([...out].sort().join("\n"))'
+   ```
+
+   It prints every package in the tree that is not under a plain permissive license, the platform
+   builds of one package as one line. The ones `THIRD-PARTY-NOTICES.md` already accounts for are
+   expected: libvips beside sharp (`@img/sharp-*`), lightningcss, node-forge with its choice of
+   licenses, and caniuse-lite. The site's generator has a `package.json` of its own, the
+   repository's `ssg/package.json`: when that one changed, run both commands in that folder.
+
+   Anything else either prints is a finding to **report, not to absorb**. A copyleft or source-available
    dependency (GPL, AGPL, LGPL, MPL, SSPL, BUSL, PolyForm, "non-commercial") can force this
    project's own terms to change, and that is the user's decision. A substantive new dependency also
    earns a row in `THIRD-PARTY-NOTICES.md`.

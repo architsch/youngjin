@@ -37,7 +37,6 @@
 		"imageMapEditor": "node dev/scripts/imageMapEditor/server.js",
 		"imagePrep": "node dev/scripts/imagePrep/prep.js",
 		"particleEffectEditor": "node dev/scripts/particleEffectEditor/server.js",
-		"postImagePreprocess": "node dev/scripts/postImagePreprocess.js",
 		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js && node dev/scripts/compressBundles.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./dist/client/style.css",
@@ -77,7 +76,7 @@
 		"zod": "^4.6.7"
 	},
 	"optionalDependencies": {
-		"sharp": "^0.34.5"
+		"sharp": "^0.35.5"
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/client": "^2.3.1",

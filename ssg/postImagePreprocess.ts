@@ -1,13 +1,11 @@
-// Scales the pictures for a post by a percentage: every .png and .jpg in temp/post_images is saved as a
-// JPEG in temp/post_images/out, encoded like the pictures already published in public/devlog-2026.
-//
-//   npm run postImagePreprocess 50
+// Scales the pictures for a post by a percentage (`npm run postImagePreprocess 50`): every .png and .jpg in the
+// repository's temp/post_images is saved as a JPEG in its out/, encoded like the pictures already published in
+// public/devlog-2026.
+import fs from "node:fs";
+import path from "node:path";
+import sharp from "sharp";
 
-const fs = require("fs");
-const path = require("path");
-const sharp = require("sharp");
-
-const INPUT_DIR = path.join(__dirname, "../../temp/post_images");
+const INPUT_DIR = path.resolve(import.meta.dirname, "../temp/post_images");
 const OUTPUT_DIR = path.join(INPUT_DIR, "out");
 
 const INPUT_EXTENSIONS = [".png", ".jpg", ".jpeg"];
@@ -18,10 +16,10 @@ const JPEG_OPTIONS = {quality: 70, progressive: true, chromaSubsampling: "4:4:4"
 // public/style.css).
 const BACKGROUND = "#303030";
 
-function parsePercentage(arg)
+function parsePercentage(arg: string | undefined): number
 {
     const match = /^(\d+)%?$/.exec(arg ?? "");
-    const percentage = match == null ? 0 : Number(match[1]);
+    const percentage = (match == null) ? 0 : Number(match[1]);
     if (percentage <= 0)
     {
         console.error(`❌ Expected a whole percentage above 0, as in \`npm run postImagePreprocess 50\`, but got [${arg ?? ""}].`);
@@ -30,7 +28,7 @@ function parsePercentage(arg)
     return percentage;
 }
 
-function listPictures()
+function listPictures(): string[]
 {
     if (!fs.existsSync(INPUT_DIR))
     {
@@ -45,14 +43,14 @@ function listPictures()
         .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
 }
 
-function outputName(fileName)
+function outputName(fileName: string): string
 {
     return `${path.parse(fileName).name}.jpg`;
 }
 
 // "a.png" and "a.jpg" would both be written to out/a.jpg, the second over the first (as would "A.png", on
 // a case-insensitive disk).
-function exitOnClashes(fileNames)
+function exitOnClashes(fileNames: string[]): void
 {
     const byOutput = Map.groupBy(fileNames, (fileName) => outputName(fileName).toLowerCase());
     const clashes = [...byOutput.values()].filter((group) => group.length > 1);
@@ -64,7 +62,7 @@ function exitOnClashes(fileNames)
     process.exit(1);
 }
 
-async function scalePicture(fileName, factor)
+async function scalePicture(fileName: string, factor: number): Promise<void>
 {
     const inputPath = path.join(INPUT_DIR, fileName);
     // The size as displayed: a phone photo is often stored sideways, with an EXIF tag saying how to turn it.
@@ -81,43 +79,35 @@ async function scalePicture(fileName, factor)
     console.log(`  ${fileName} (${width}x${height}) -> out/${outputName(fileName)} (${outWidth}x${outHeight})`);
 }
 
-async function main()
+const percentage = parsePercentage(process.argv[2]);
+const fileNames = listPictures();
+if (fileNames.length == 0)
 {
-    const percentage = parsePercentage(process.argv[2]);
-    const fileNames = listPictures();
-    if (fileNames.length == 0)
-    {
-        console.error(`❌ No .png or .jpg files in [${INPUT_DIR}].`);
-        process.exit(1);
-    }
-    exitOnClashes(fileNames);
+    console.error(`❌ No .png or .jpg files in [${INPUT_DIR}].`);
+    process.exit(1);
+}
+exitOnClashes(fileNames);
 
-    fs.mkdirSync(OUTPUT_DIR, {recursive: true});
-    console.log(`Scaling ${fileNames.length} picture(s) to ${percentage}%:`);
+fs.mkdirSync(OUTPUT_DIR, {recursive: true});
+console.log(`Scaling ${fileNames.length} picture(s) to ${percentage}%:`);
 
-    let failures = 0;
-    for (const fileName of fileNames)
+let failures = 0;
+for (const fileName of fileNames)
+{
+    try
     {
-        try
-        {
-            await scalePicture(fileName, percentage / 100);
-        }
-        catch (err)
-        {
-            failures++;
-            console.error(`  ❌ ${fileName}: ${err.message}`);
-        }
+        await scalePicture(fileName, percentage / 100);
     }
-
-    if (failures > 0)
+    catch (err)
     {
-        console.error(`❌ ${failures} of ${fileNames.length} picture(s) could not be scaled.`);
-        process.exit(1);
+        failures++;
+        console.error(`  ❌ ${fileName}: ${(err instanceof Error) ? err.message : String(err)}`);
     }
-    console.log("✅ Done.");
 }
 
-main().catch((err) => {
-    console.error(err);
+if (failures > 0)
+{
+    console.error(`❌ ${failures} of ${fileNames.length} picture(s) could not be scaled.`);
     process.exit(1);
-});
+}
+console.log("✅ Done.");

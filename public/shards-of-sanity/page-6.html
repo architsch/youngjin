@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="How to use a natural language (such as English) for software design and implementation? This article shows a new way of developing software in the spirit of declarative programming, such as that of LISP, Prolog, and Haskell. Check this out if you are willing to explore new paradigms in computer science.">
+<meta name="keywords" content="software engineering, natural language programming, logic programming, functional programming, lisp, prolog, haskell, knowledge graph, systems thinking, technical design, narrative systems">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Post-AI Computer Science - Volume 6"/>
+<meta property="og:url" content="https://thingspool.net/shards-of-sanity/page-6.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="How to use a natural language (such as English) for software design and implementation? This article shows a new way of developing software in the spirit of declarative programming, such as that of LISP, Prolog, and Haskell. Check this out if you are willing to explore new paradigms in computer science."/>
+<meta property="og:image" content="https://thingspool.net/shards-of-sanity/035.jpg"/>
+<meta property="og:image:alt" content="Post-AI Computer Science - Volume 6">
+<link rel="canonical" href="https://thingspool.net/shards-of-sanity/page-6.html">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Post-AI Computer Science - Volume 6</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="alternate" type="application/rss+xml" href="https://thingspool.net/rss.xml" title="RSS Feed">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/shards-of-sanity/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/shards-of-sanity/list.html">Shards of Sanity (2026)</a>/Post-AI Computer Science - Volume 6</div>
+<div class="s_row"></div>
+
+<h1>Post-AI Computer Science - Volume 6</h1>
+<p class="dim">Author: <a href="https://www.linkedin.com/in/youngjin-kang-55321882" target="_blank">Youngjin Kang</a>&nbsp;&nbsp;&nbsp;Date: November 20, 2026</p>
+<hr>
+<h3><b>The Origin of Values</b></h3>
+<p>Our world is filled with definitions. We know that things exist because we have defined them, for otherwise we wouldn't even be sure of their existence in the first place. What allows us to keep track of things in our world is a collection of definitions. A few of them are shown below.</p>
+<div class="snippet"><pre><code>Alice is a human.
+Dinah is a cat.
+A human is an animal.
+A cat is an animal.
+An animal is an organism.
+An organism is an object.</code></pre></div>
+<p>Definitions are not limited to mere classification of objects, of course. In our everyday lives, we often find ourselves doing more than tagging things with their associated keywords (such as "Alice" with the keyword "human"); we usually go further in our faculty of reasoning by relating things with each other, based on a variety of relations such as "X has Y", "X likes Y", "X is the parent of Y", and so on.</p>
+<div class="snippet"><pre><code>Alice has Dinah.
+Alice has Kitty.
+Alice is not with Dinah.
+Alice likes Dinah.
+Dinah likes Alice.
+Dinah is the parent of Kitty.
+Kitty is the child of Dinah.</code></pre></div>
+<p>By defining things as well as how they are related with one another, we model the environment in which we live and figure out the way it works systematically (i.e. which events are caused by which, etc).</p>
+<p>There is one major concept which has not yet been sufficiently discussed, however. Although I have mentioned how things and their relations could be formulated, I have not yet thoroughly demonstrated the processes through which these "things" may be endowed with their own values - whether they be moral, aesthetic, or characterized by yet another dimension of intentionality. Some things have values in them; and this is the reason why we, as conscious beings, constantly strive to multiply things which are valuable while suppressing things which go against our values.</p>
+<p>What do we mean by "values", though? In what occasions do we claim that a thing is valuable, and in what occasions do we claim that a thing is not valuable (or anti-valuable)? The biggest difficulty may perhaps be found in the sheer diversity of values in our society as well as their tendency to appear as subjective. There are so many different ways of being either valuable or not valuable, and we do not really have a global standard against which we can measure the amount of "value" stored in anything we happen to perceive.</p>
+<p>As social beings, however, we usually try to share a common set of norms under which we can all agree on what it means to be valuable (aside from potential disagreements which pertain to minor details). Whenever such norms seem to be self-evident, we tend to allow ourselves to insist that something is either objectively good or bad. Here, we are supposing the presence of a global axis of value, where its positive end is called "good" and its negative end is called "bad". The task of increasing the value of something, then, must correspond to the task of shifting its position toward the positive end ("good") and away from the negative end ("bad") of that global axis.</p>
+<p>Of course, due to the subjectivity of our own minds, we all carry our own local copies of that axis inside our inner machineries of judgement. Under the guidance of negotiation and compliance, though, we end up sacrificing some of our unique tastes of morality in order to fit ourselves into mankind's collective sense of justice, whilst struggling to reserve our individual preferences under the premise that they are "mostly harmless".</p>
+<p>As we grow up and try to get along with other people, therefore, we gradually learn how to draw a decent boundary between the standard of ethics and our personal deviations from it. This eventually leads us to concede that you and I, despite differences in our viewpoints, both share a common set of definitions in regard to which things are supposedly "good" and which things are supposedly "bad". Some of them feel so obvious, that they can hardly be imagined to allow a room for a dispute.</p>
+<hr>
+<h3><b>Good vs Bad</b></h3>
+<p>Dichotomy is, in general, not a highly esteemed sort of worldview, nor is it deemed to be possessed of an intellectual depth. The main justification behind such a sentiment is that most of the stuff in our world is immeasurably multifaceted, that any attempt to interpret it in a black-and-white manner ought to be taken as a sign of immaturity.</p>
+<p>However, anyone who has a thorough grasp of human nature will understand that at least some degree of generalization is inevitable when it comes to the matter of efficiency in decision-making. It is far more economically viable for a brain to save energy by promptly labeling everything as either "good" or "bad", rather than taking pains to untangle the vastly interconnected fabric of relations in our universe and inspecting them from a multitude of angles - all for the sake of "being fair" in one's judgement.</p>
+<p>Despite the risk of moral accusations, therefore, it is a careful conclusion of mine that a binary representation of values (i.e. categorization of things as either "good" or "bad" rather than multidimensional mixtures between the two) is in fact a far more accurate depiction of the way most people treat their surroundings, than a purely holistic perspective which is unbiased in every aspect. So from the standpoint of realism, a portrayal of our world as seen from the colored lenses of human bigotry should be taken as an honest reflection of our everyday reality, rather than a downright fallacy in logic.</p>
+<p>With this in mind, let us begin constructing a system of values by identifying some of the things in nature which are either obviously good or bad. I will come up with some of the most abstract examples first, since it provides me with a convenient way to capture the overall landscape of what I am about to delineate.</p>
+<p>Let me start with the question of life and death. Do we want to live or die? Aside from exceptional circumstances (such as depression or religious fanaticism), the general consensus is that we, as living organisms, desire to live as long as possible and avoid dying. Thus, it is pretty reasonable to claim that life is good and death is bad.</p>
+<div class="snippet"><pre><code>Life is good.
+Death is bad.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/030.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 1)">
+<p>This may sound a bit too crude and extreme, but bear in mind that we need to allow this kind of over-generalization for the virtue of grammatical simplicity (at least for the time being). Next, let us keep articulating this lineage of definitions by introducing more subjects to the scene.</p>
+<hr>
+<h3><b>Sources of Good and Bad</b></h3>
+<p>If things are either good or bad, we should be allowed to imagine that something could be either "good" because it has a tendency to encourage the existence of good things and discourage the existence of bad things, or "bad" because it has a tendency to discourage the existence of good things and encourage the existence the bad things. For instance, we know that a medicine is good because it saves life which is good.</p>
+<div class="snippet"><pre><code>A medicine saves life and life is good,
+    so a medicine is good.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/031.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 2)">
+<p>The underlying logic which drives this flow of reason, too, can be outlined succinctly. In fact, we may as well come up with an abstract (symbolic) representation of such a logic, which could be written in the following manner:</p>
+<div class="snippet"><pre><code>IF X saves Y AND Y is good,
+    THEN X is good.</code></pre></div>
+<p>For any "X" and any "Y" (without necessarily specifying what they are), if X has a tendency to save Y and Y happens to be good, our conclusion will be that X must be good because anything which saves a good thing must also be good. In our foregoing example, X is a medicine and Y is life.</p>
+<p>Here is the opposite scenario. We say that a disease, in general, works in a way which eventually contributes to the killing of life, or at least attenutates the chance of life's full self-manifestation. Since a disease negatively influences the growth and preservation of something (i.e. life) which is presumed to be good, therefore, we are led to believe that a disease must be bad.</p>
+<div class="snippet"><pre><code>A disease kills life and life is good,
+    so a disease is bad.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/032.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 3)">
+<p>This, too, is based upon its own piece of logic, which is generic enough to cover innumerable cases (not just our particular case) which are deemed to obey the same law. That is, if a thing called "X" kills a good thing that is called "Y", we will be able to tell that X is supposed to be bad because anything which tends to kill a good thing must be bad.</p>
+<div class="snippet"><pre><code>IF X kills Y AND Y is good,
+    THEN X is bad.</code></pre></div>
+<p>The aforementioned two rules have their own mirror images. If we take the concept of death into account, for example, we might as well state that the act of saving life is equivalent to the act of killing death, whereas the act of saving death is equivalent to the act of killing life (just like increasing heat is the same thing as decreasing coldness, and vice versa). Thus, the follow-up conclusions should be that a medicine kills death just as much as it saves life (which makes a medicine a good thing), while a disease saves death just as much as it kills life (which makes a disease a bad thing).</p>
+<div class="snippet"><pre><code>A medicine kills death and death is bad,
+    so a medicine is good.
+
+
+A disease saves death and death is bad,
+    so a disease is bad.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/033.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 4)">
+<p>These two lines of thought, too, are products of their own preceding conditionals. Anything which kills a bad thing must be a good thing (e.g. "An enemy of my enemy is my friend"), and anything which saves a bad thing must be a bad thing (e.g. "A friend of my enemy is my enemy").</p>
+<div class="snippet"><pre><code>IF X kills Y AND Y is bad,
+    THEN X is good.
+
+
+IF X saves Y AND Y is bad,
+    THEN X is bad.</code></pre></div>
+<hr>
+<h3><b>Properties</b></h3>
+<p>The examples I have illustrated so far, though, do not comprehensively describe the nature of goodness and badness. There are good things and bad things in our universe, yet oftentimes they appear in mixed forms and thus cannot simply be labeled as either independently good or bad. Many things come in multiple flavors; hence it often occurs to us that an object, due to its structural complexity, turns out to exhibit its merits at some moments in time as well as its defects at some other moments in time, depending on the way in which it interacts with its surroundings.</p>
+<p>The meaning of "structural complexity" will become clearer if you picture it as the idea that an object is capable of having multiple properties. We know that most of the things found in nature are hardly atomic; each of them is made up of a multitude of parts, some of which can be abstract. For example, an automobile has a maximum speed and a rate of fuel consumption, and a bank account has a balance and the owner's ID. A forest has an area and a number of trees, and a rock has a mass and volume.</p>
+<p>But most importantly, we should note that every living thing has a life as one of its constituents (for otherwise it would not qualify as "living"). Since Alice is a living thing, she has a life. And we also know that life is good.</p>
+<div class="snippet"><pre><code>Alice has a life.
+Life is good.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/034.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 5)">
+<p>Here, "life" is Alice's property because she owns it as part of herself. And since this property is good, we can say that Alice has a good property (which is called "life"). A more concise way of expressing these two points is to join them together with the word "and".</p>
+<div class="snippet"><pre><code>Alice has a life and life is good.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/035.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 6)">
+<p>If the repetition of the word "life" bothers you, you may as well refer to its first occurrence with the word "it". As you can tell from the sentence below, the word "it" is being used here to denote Alice's life.</p>
+<div class="snippet"><pre><code>Alice has a life and it is good.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/036.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 7)">
+<p>It is even possible to get rid of the word "and". We could, for instance, glue the clause "Alice has a life" and the clause "It is good" together by means of a relative pronoun (i.e. "which"). This kind of compaction allows us to arrange a multitude of thoughts within a single sequential path.</p>
+<div class="snippet"><pre><code>Alice has a life which is good.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/037.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 8)">
+<p>Aside from technical details, there are two primary takeaways which have been evinced so far. First, Alice has a property and its name is "life". Second, this property is endowed with the characteristic of being good.</p>
+<p>The semantic implication of these two facts is quite profound in nature, and is versatile enough to be useful in an unlimited range of situations in our daily lives. A few clear examples will reveal their significance as soon as we acknowledge that Alice is a complex and multidimensional entity (as every human being is), rather than a mere placeholder in our conceptual space of symbolic reasoning.</p>
+<hr>
+<h3><b>Locality of Values</b></h3>
+<p>One thing you might have realized at this point is that goodness and badness are not necessarily omnipresent traits. Alice has a life, but an inanimate object (such as a piece of rock) does not. Whereas Alice could be in possession of something which is either good or bad, therefore, the same condition may not be globally shared across all other things which make up the world. As an example, suppose that Alice has a disease (such as cold) with her, besides her own life.</p>
+<div class="snippet"><pre><code>Alice has a life which is good.
+Alice has a disease which kills life.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/038.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 9)">
+<p>Since a disease is a threat to life's existence, we are left with the conclusion that a disease is bad for life. And since life is supposed to be good and a disease is inclined to diminish it, owning a disease must be bad for anyone who also owns a life. Thus in case of Alice, we can tell that her disease is bad for her because she owns a life.</p>
+<div class="snippet"><pre><code>Alice has a life which is good
+        and a disease which kills life,
+    so Alice's disease is bad for Alice.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/039.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 10)">
+<p>Alice's disease is not necessarily bad for anyone other than herself, since its symptoms are bound to affect its host only (unless the disease happens to be contagious and Alice spreads it by coughing in public, etc). Therefore, it is more accurate to state that Alice's disease is bad FOR Alice specifically, than to state that it is just "bad" in general.</p>
+<p>Since Alice's disease is bad for her, it must be reasonable for Alice to wish to eliminate it. After all, it makes more sense to discourage the existence of a bad thing than to encourage it.</p>
+<div class="snippet"><pre><code>Alice's disease is bad for Alice,
+    so Alice wishes to kill the disease.</code></pre></div>
+<p>When we combine this new segment of logic into the foregoing line of reason, we eventually end up with a two-step conclusion. First of all, since Alice's disease is a threat to the maintenance of her life, it must be bad for her. This intermediary fact, then, becomes a reason for Alice to try to get rid of her disease.</p>
+<div class="snippet"><pre><code>Alice has a life which is good
+        and a disease which kills life,
+    so Alice's disease is bad for Alice,
+    so Alice wishes to kill the disease.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/040.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 11)">
+<p>What we are seeing here is a goal, which is going to be achieved once Alice succeeds in destroying her disease. How shall Alice pursue such a goal? Our prior knowledge tells us that a medicine is what Alice needs in order to fight against her disease. As long as it is assumed that Alice knows that a medicine kills a disease (which is a pretty reasonable assumption to make, since it is a common sense), we will be able to guess that Alice will try to have a medicine for the purpose of minimizing the number of bad things within herself.</p>
+<div class="snippet"><pre><code>A medicine kills a disease
+        and Alice wishes to kill the disease,
+    so Alice will have a medicine.</code></pre></div>
+<p>Let us merge this new piece of information into the sequence of statements we have been keeping track of, and we will end up with what is shown below.</p>
+<div class="snippet"><pre><code>Alice has a life which is good
+        and a disease which kills life,
+    so Alice's disease is bad for Alice,
+    so Alice wishes to kill the disease,
+    so Alice will have a medicine.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/041.jpg" alt="Post-AI Computer Science - Volume 6 (Figure 12)">
+<p>And the following generic rules are the driving forces behind the logic which has hitherto been demonstrated. Since they are abstract in nature, we can apply them to any scenario whose pattern of reasoning matches that of Alice, her disease, and a medicine which supposedly cures her.</p>
+<div class="snippet"><pre><code>IF A has L which is good
+        AND D which kills L,
+    THEN A's D is bad for A.
+
+
+IF A's D is bad for A,
+    THEN A wishes to kill D.
+
+
+IF M kills D
+        AND A wishes to kill D,
+    THEN A will have M.
+
+
+A = Alice
+L = Life
+D = Disease
+M = Medicine</code></pre></div>
+<p>The first rule says, "Anything in someone which kills a good thing in that person is bad for that person", the second rule says, "Everyone wishes to kill something in herself which is bad for her", and the third rule says, "Everyone is willing to acquire something which kills anything she wishes to kill".</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/shards-of-sanity/page-5.html">Previous Page</a>
+<div class="m_row"></div>
+<p class="dim">&copy 2019-2026 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+<script>
+(function () {
+    var ref = null;
+    try { ref = sessionStorage.getItem("thingspool_ref"); } catch (e) {}
+    if (!ref) {
+        ref = new URLSearchParams(location.search).get("ref");
+        try { if (ref) sessionStorage.setItem("thingspool_ref", ref); } catch (e) {}
+    }
+    if (!ref)
+        return;
+    var links = document.querySelectorAll('a[href^="https://app.thingspool.net"]');
+    for (var i = 0; i < links.length; ++i) {
+        var url = new URL(links[i].href);
+        if (!url.searchParams.has("ref")) {
+            url.searchParams.set("ref", ref);
+            links[i].href = url.toString();
+        }
+    }
+})();
+</script>
+</body>
+</html>

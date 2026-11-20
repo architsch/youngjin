@@ -20,6 +20,7 @@ Its commands run in `/ssg`:
 | `npm run build` | builds the site into `/public`, writing only the files that changed |
 | `npm run check` | tells whether a build would change anything (the pre-commit hook runs it) |
 | `npm run preview` | shows the site at `http://127.0.0.1:3400`, rebuilt whenever a source, a template or the generator changed, and the style test page at `/test-ui` |
+| `npm run postImagePreprocess <percent>` | scales every `.png` and `.jpg` in `/temp/post_images` by that percentage into JPEGs in its `out/`, encoded like the pictures already in `/public/devlog-2026` (transparent parts take the page background) |
 | `npm test`, `npm run typecheck` | its tests and its types |
 
 Before a commit, the site is built there when a source, a template or the generator changed, and `npm run beforeCommit` runs in `/robot-rooms` when the game changed; the pre-commit hook checks both.

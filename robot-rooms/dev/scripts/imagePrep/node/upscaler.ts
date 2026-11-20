@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { execFileSync } from "child_process";
-import sharp from "sharp";
+import sharp, { Sharp } from "sharp";
 import RgbaImage from "../../imageMapEditor/core/rgbaImage";
 import ImageProcessingUtil from "../../imageMapEditor/core/imageProcessingUtil";
 import CutoutUtil from "../core/cutoutUtil";
@@ -58,7 +58,7 @@ export default class Upscaler
         return result;
     }
 
-    private async run(binary: string, name: string, picture: sharp.Sharp): Promise<RgbaImage>
+    private async run(binary: string, name: string, picture: Sharp): Promise<RgbaImage>
     {
         const inPath = path.join(this.cacheDir, `${name}.in.png`);
         const outPath = path.join(this.cacheDir, `${name}.out.png`);
@@ -112,13 +112,13 @@ export default class Upscaler
     }
 }
 
-function encode(image: RgbaImage): sharp.Sharp
+function encode(image: RgbaImage): Sharp
 {
     return sharp(Buffer.from(image.data.buffer, image.data.byteOffset, image.data.length),
         {raw: {width: image.width, height: image.height, channels: 4}});
 }
 
-async function decode(image: sharp.Sharp): Promise<RgbaImage>
+async function decode(image: Sharp): Promise<RgbaImage>
 {
     const {data, info} = await image.ensureAlpha().raw().toBuffer({resolveWithObject: true});
     return {width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length)};

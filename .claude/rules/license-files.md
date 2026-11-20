@@ -45,4 +45,5 @@ It fails in one of two directions, and both are public:
    statement false, and it must be updated.
 
 The `docs-and-tests-sync` skill is where this checklist is actually run against a batch of changes,
-including the command that reports any non-permissive dependency license.
+including the commands that report any non-permissive license among the dependencies and what they
+bring with them.

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import sharp from "sharp";
+import sharp, { OverlayOptions, Sharp } from "sharp";
 import Upscaler from "./upscaler";
 import Segmenter from "./segmenter";
 import RgbaImage from "../../imageMapEditor/core/rgbaImage";
@@ -359,7 +359,7 @@ async function writeContactSheet(workDir: string,
     const header = `<svg width="${sheetWidth}" height="${SHEET_HEADER_HEIGHT}"><rect width="100%" height="100%" fill="#222"/>`
         + `<text x="8" y="25" font-family="sans-serif" font-size="14" fill="#fff">Each source, then its result: fitted into `
         + `${SHEET_FIT} px (a prop's largest image) and drawn ${SHEET_ZOOM}x, pixel for pixel</text></svg>`;
-    const composites: sharp.OverlayOptions[] = [{input: Buffer.from(header), left: 0, top: 0}];
+    const composites: OverlayOptions[] =[{input: Buffer.from(header), left: 0, top: 0}];
     const cells = pairs.flatMap(pair => [
         {image: pair.before, label: `${pair.name}: source, ${pair.before.width}x${pair.before.height}`},
         {image: pair.after, label: `${pair.name}: result, ${pair.after.width}x${pair.after.height}`},
@@ -406,13 +406,13 @@ async function fitWithin(image: RgbaImage, maxSide: number): Promise<RgbaImage>
     return fitted;
 }
 
-async function decode(picture: sharp.Sharp): Promise<RgbaImage>
+async function decode(picture: Sharp): Promise<RgbaImage>
 {
     const {data, info} = await picture.ensureAlpha().raw().toBuffer({resolveWithObject: true});
     return {width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length)};
 }
 
-function encode(image: RgbaImage): sharp.Sharp
+function encode(image: RgbaImage): Sharp
 {
     return sharp(Buffer.from(image.data.buffer, image.data.byteOffset, image.data.length),
         {raw: {width: image.width, height: image.height, channels: 4}});

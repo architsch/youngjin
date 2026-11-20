@@ -1,10 +1,10 @@
-import sharp from "sharp";
+import sharp, { OutputInfo, Sharp } from "sharp";
 import FileUtil from "./fileUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const ImageFileUtil =
 {
-    readImage: (relativeFilePath: string, rootDir?: string): sharp.Sharp | undefined =>
+    readImage: (relativeFilePath: string, rootDir?: string): Sharp | undefined =>
     {
         try {
             const absoluteFilePath = FileUtil.getAbsoluteFilePath(relativeFilePath, rootDir);
@@ -15,7 +15,7 @@ const ImageFileUtil =
             return undefined;
         }
     },
-    writeImage: async (relativeFilePath: string, image: sharp.Sharp, rootDir?: string): Promise<sharp.OutputInfo | undefined> =>
+    writeImage: async (relativeFilePath: string, image: Sharp, rootDir?: string): Promise<OutputInfo | undefined> =>
     {
         try {
             const absoluteFilePath = FileUtil.getAbsoluteFilePath(relativeFilePath, rootDir);

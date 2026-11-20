@@ -1,5 +1,5 @@
 import path from "path";
-import sharp from "sharp";
+import sharp, { Sharp } from "sharp";
 import SourceLibrary from "./sourceLibrary";
 import RequestError from "./requestError";
 import MissingToolsError from "./missingToolsError";
@@ -227,7 +227,7 @@ async function toDataUrl(image: RgbaImage): Promise<string>
     return `data:image/webp;base64,${bytes.toString("base64")}`;
 }
 
-function encode(image: RgbaImage): sharp.Sharp
+function encode(image: RgbaImage): Sharp
 {
     return sharp(Buffer.from(image.data.buffer, image.data.byteOffset, image.data.length),
         {raw: {width: image.width, height: image.height, channels: 4}});

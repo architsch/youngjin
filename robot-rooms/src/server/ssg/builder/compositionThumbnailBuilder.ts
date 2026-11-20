@@ -3,7 +3,7 @@ import { promisify } from "util";
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import sharp from "sharp";
+import sharp, { OverlayOptions } from "sharp";
 import { STATIC_PAGE_ROOT_DIR } from "../../system/serverConstants";
 import CompositionThumbnailUtil from "../../../shared/graphics/mesh/composition/util/compositionThumbnailUtil";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -130,7 +130,7 @@ async function bundleRenderer(): Promise<string>
 async function writeAtlas(objectType: string, pixelsList: string[]): Promise<void>
 {
     const cellSize = CompositionThumbnailUtil.getCellSize();
-    const composites: sharp.OverlayOptions[] = [];
+    const composites: OverlayOptions[] = [];
     for (let position = 0; position < pixelsList.length; ++position)
     {
         const pixels = Buffer.from(pixelsList[position], "base64");

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import sharp from "sharp";
+import sharp, { Sharp } from "sharp";
 import EditorPaths from "./editorPaths";
 import ConflictError from "./conflictError";
 import RequestError from "./requestError";
@@ -384,7 +384,7 @@ function getSourceName(source: string): string
     }
 }
 
-async function decodeRaw(image: sharp.Sharp): Promise<RgbaImage>
+async function decodeRaw(image: Sharp): Promise<RgbaImage>
 {
     const {data, info} = await image.ensureAlpha().raw().toBuffer({resolveWithObject: true});
     return {width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length)};

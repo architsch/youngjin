@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { OverlayOptions } from "sharp";
 import FileUtil from "../util/fileUtil";
 import ImageFileUtil from "../util/imageFileUtil";
 import { STATIC_PAGE_ROOT_DIR, SRC_ROOT_DIR } from "../../system/serverConstants";
@@ -261,7 +261,7 @@ export default class ImageMapBuilder
         const gridWidth = numCols === 0 ? 0 : numCols * cellWidth;
         const gridHeight = numRows === 0 ? 0 : numRows * cellHeight;
 
-        const composites: sharp.OverlayOptions[] = [];
+        const composites: OverlayOptions[] = [];
         let col = 0, row = 0, maxCol = 0, maxRow = 0;
 
         for (const imageMetadata of subfolderInfo.imageMetadataList)

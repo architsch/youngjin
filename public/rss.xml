@@ -4,8 +4,15 @@
 <title>ThingsPool</title>
 <link>https://thingspool.net/library.html</link>
 <description>A collection of essays and thought experiments, which cover a wide range of subjects including computer science, game design, logic, philosophy, and art.</description>
-<lastBuildDate>Wed, 18 Nov 2026 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Fri, 20 Nov 2026 00:00:00 GMT</lastBuildDate>
 <atom:link href="https://thingspool.net/rss.xml" rel="self" type="application/rss+xml"/>
+<item>
+  <title>Post-AI Computer Science - Volume 6</title>
+  <link>https://thingspool.net/shards-of-sanity/page-6.html</link>
+  <guid isPermaLink="true">https://thingspool.net/shards-of-sanity/page-6.html</guid>
+  <pubDate>Fri, 20 Nov 2026 00:00:00 GMT</pubDate>
+  <description>How to use a natural language (such as English) for software design and implementation? This article shows a new way of developing software in the spirit of declarative programming, such as that of LISP, Prolog, and Haskell. Check this out if you are willing to explore new paradigms in computer science.</description>
+</item>
 <item>
   <title>Robot Rooms</title>
   <link>https://thingspool.net/RobotRooms/page.html</link>

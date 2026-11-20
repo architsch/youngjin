@@ -214,11 +214,30 @@ Dependencies are resolved from npm at build time rather than vendored into this
 repository, so their license texts live in `node_modules/` once installed.
 
 Every direct dependency and development dependency is under a permissive
-license — **MIT**, **Apache-2.0** or **ISC**. There is no copyleft-licensed
-dependency in the tree, which is what leaves the Apache-2.0 choice for this
-project's own code unconstrained.
+license — **MIT**, **Apache-2.0** or **ISC**. Further down the tree, two
+packages are under copyleft licenses. Neither is modified, committed, bundled
+or shipped, so the Apache-2.0 choice for this project's own code stays
+unconstrained:
 
-The substantive ones, for attribution:
+- **libvips**, the image library sharp runs on, is under the
+  **LGPL-3.0-or-later**. npm installs it beside sharp as a prebuilt shared
+  library (`@img/sharp-libvips-*`; sharp's builds for Windows and WebAssembly
+  hold it inside them), and sharp loads it as it runs. That happens only on a
+  developer's machine: when the game's image assets are built, in its picture
+  tools and tests, and when the pictures for the site's posts are prepared.
+  The deploy workflow removes sharp and libvips from the server before the
+  game starts. The license covers the library and sets no terms on the
+  pictures made with it.
+- **lightningcss**, the CSS tool inside Tailwind's builder and the test
+  runner's bundler, is under the **MPL-2.0**. It runs when the stylesheet is
+  built, and its license covers its own files, not the stylesheet it writes.
+
+Two more carry other terms: **node-forge**, which firebase-admin brings,
+offers a choice of BSD-3-Clause or GPL-2.0 and is used under the
+BSD-3-Clause, and **caniuse-lite**, the browser data the bundler reads, is
+under CC-BY-4.0, an attribution license.
+
+The substantive direct dependencies, for attribution:
 
 | Package | License | Role |
 |---|---|---|
@@ -233,6 +252,7 @@ The substantive ones, for attribution:
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |
 | [@google-cloud/secret-manager](https://github.com/googleapis/google-cloud-node) | Apache-2.0 | secret loading |
 | [ejs](https://github.com/mde/ejs) | Apache-2.0 | templating, of the game's pages and of the site's (`ssg/`) |
+| [sharp](https://github.com/lovell/sharp) | Apache-2.0 | image processing, of the game's image assets and of the pictures for the site's posts (`ssg/`) (dev) |
 | [typescript](https://github.com/microsoft/TypeScript) | Apache-2.0 | compiler (dev) |
 | [webpack](https://github.com/webpack/webpack) | MIT | bundler (dev) |
 | [vitest](https://github.com/vitest-dev/vitest) | MIT | integration tests (dev) |

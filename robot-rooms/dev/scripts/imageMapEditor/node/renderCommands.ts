@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import sharp from "sharp";
+import sharp, { OverlayOptions } from "sharp";
 import EntryStore from "./entryStore";
 import SampleRenderUtil from "../core/sampleRenderUtil";
 import EntryPathUtil from "../core/entryPathUtil";
@@ -100,7 +100,7 @@ const RenderCommands =
             + `<rect x="8" y="14" width="${unitPixels}" height="12" fill="#ffd21f"/>`
             + `<text x="${unitPixels + 18}" y="25" font-family="sans-serif" font-size="14" fill="#fff">1 unit (a prop's `
             + `largest image); paintings are fitted to their cells</text></svg>`;
-        const composites: sharp.OverlayOptions[] = [{input: Buffer.from(header), left: 0, top: 0}];
+        const composites: OverlayOptions[] =[{input: Buffer.from(header), left: 0, top: 0}];
         for (let i = 0; i < entries.length; ++i)
         {
             const entry = entries[i];

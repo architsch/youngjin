@@ -516,7 +516,12 @@ suggest from it.
     that's live", so a new name arrives with a new version, and it must be one "no other organization's plugin
     uses". A submission in review and never published can be withdrawn, and submitting "the same repository and
     path" again reopens it. A submission's repository and folder cannot be changed; what a renamed GitHub repository
-    does to one, and how a plugin's page address is formed, are not documented. The steps, at
+    does to one, and how a plugin's page address is formed, are not documented. **Tried 2026-11-19:** the portal
+    follows a renamed repository (it found the new commit, though its Source went on showing the old name), but a
+    submission's plugin name is fixed. A version whose `name` in `.claude-plugin/plugin.json` differs is refused
+    ("Name isn't the one you submitted ... To keep the new name, withdraw this submission under Settings, then
+    submit the plugin again"), and a submission in review drops to Needs changes. "Check for new commits" on the
+    submission's page fetches at once what the scheduled check would find in six hours. The steps, at
     claude.ai/directory/manage → Submit new → Plugin bundle: the repository, Validate, the listing details it reads
     from `plugin.json` and the README, four data-handling questions (personal data, data sent beyond its declared
     connector, retention, under-18 use), a contact email and four acknowledgements (his to tick), and how new

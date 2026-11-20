@@ -18,7 +18,6 @@ Every command here runs in this project's folder, `robot-rooms/`, and the paths 
 | `npm run imagePrep` | prepare pictures for flat use, writing only under `temp/image_prep/`: `-- --survey <file>[:x,y,w,h] ...` draws them with a grid, `-- --shades <file>[:x,y,w,h] ...` reads their brightness out cell by cell, and `-- --run <plan.json>` carries out a plan (a thing cut out of its background by Segment Anything 2, run on ONNX Runtime, both fetched there on first use, about 1 GB; a picture enlarged with Real-ESRGAN, fetched likewise, macOS only; a face seen at an angle squared up; something round made round; a part painted over with surface from elsewhere in the picture; one part kept; each result fitted within 512 px) and draws a contact sheet (see the `image-upscale-remap` skill) |
 | `npm run compositionEditor` | edit `pre_encoding_source.json` with live thumbnails, at `http://127.0.0.1:3100` (see [instanced_mesh_composition.md](../graphics/instanced_mesh_composition.md#indexed-compositions)) |
 | `npm run particleEffectEditor` | edit `particleEffects.json` (the particle effects) with a live preview, at `http://127.0.0.1:3300`; `-- --source <path>` edits a copy instead (see [particles.md](../graphics/particles.md)) |
-| `npm run postImagePreprocess <percent>` | scale every `.png` and `.jpg` in `temp/post_images/` by that percentage and save them as JPEGs in its `out/`, encoded like the pictures already in `public/devlog-2026/` (transparent parts take the page background) |
 
 Open `http://127.0.0.1:3000`. Stop with `Ctrl+C`, then run `npm stop`.
 
