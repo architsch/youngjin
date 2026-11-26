@@ -100,6 +100,11 @@ export const CHEAT_DOLLARS = 10;
 export const PLAYER_SHAPE_PRICE_DOLLARS = 10;
 // What adding a cannon to a room costs, each time (see CannonObjectTypeConfig).
 export const CANNON_PRICE_DOLLARS = 10;
+// What a pet costs to generate (see PetObjectTypeConfig), which selling one in good health gives back (see PetSaleUtil).
+export const PET_PRICE_DOLLARS = 50;
+// What it costs to put a battery into a pet, which charges it, and a wrench, which mends it (see PetInjectionUtil).
+export const PET_BATTERY_PRICE_DOLLARS = 5;
+export const PET_WRENCH_PRICE_DOLLARS = 10;
 
 // Physics
 

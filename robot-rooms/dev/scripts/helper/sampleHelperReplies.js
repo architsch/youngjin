@@ -1,16 +1,17 @@
 // Asks the real model, as a helper would (see HelperChatUtil), for each played personality's answers to a few lines from
 // a newcomer, and prints them with their lengths and what they cost, after its mood and the things on its mind in that
-// talk: to hear the helpers after changing what they are told (see the helper-instructions skill). Spends a little of
-// the helpers' API credit, outside their daily budget (this spending is not saved), and needs their key:
+// talk: to hear the helpers after changing what they are told (see the gameplay-ai skill). Spends a little of
+// the helpers' API credit, outside their daily budget (this spending is not saved), with their key from the environment,
+// or else from Secret Manager, as the dev server gets it (see docs/devOps/local_dev.md):
 //
-//   ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" \
-//       node dev/scripts/helper/sampleHelperReplies.js [--personality=jester] [--line="how do I build?"]... [--untold]
+//   node dev/scripts/helper/sampleHelperReplies.js [--personality=jester] [--line="how do I build?"]... [--untold]
 //
 // Each --line replaces the default lines; each personality hears them in turn, as one conversation. --untold speaks as
 // someone never told how to walk and build (see FTUEElementCodeEnumMap.Basics), as helpers are told of them.
 
 const path = require("path");
 const Module = require("module");
+const { loadSecrets } = require("../lib/secrets");
 
 const REPO_ROOT = path.join(__dirname, "../../..");
 const DEFAULT_LINES = [
@@ -52,11 +53,7 @@ export { default as MessageLinkUtil } from "./src/shared/object/util/messageLink
 
 async function main()
 {
-    if (!process.env.ANTHROPIC_API_KEY)
-    {
-        console.error("ANTHROPIC_API_KEY is not set (see the comment at the top of this script).");
-        process.exit(1);
-    }
+    await loadSecrets("sampleHelperReplies", ["ANTHROPIC_API_KEY"]);
     const args = process.argv.slice(2);
     const chosen = args.find(arg => arg.startsWith("--personality="))?.split("=")[1];
     const givenLines = args.filter(arg => arg.startsWith("--line=")).map(arg => arg.slice("--line=".length));

@@ -90,7 +90,6 @@ import { WALL_QUAD_DEPTH_BELOW_CAMERA }
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE, SINGLE_PLAYER_START_TAG, STOREY_FLOOR_COLLISION_LAYER,
     TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
-import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";

@@ -1,6 +1,6 @@
 // Prints what helpers might say of the things they go and look at (see HelperRemarkUtil), from their fixed words and
 // tastes, each remark with its length: to read the remarks after changing them, or the tastes and keywords behind them
-// (see the helper-instructions skill). No model is asked, so it costs nothing:
+// (see the gameplay-ai skill). No model is asked, so it costs nothing:
 //
 //   node dev/scripts/helper/sampleRemarks.js [--personality=curator] [--npcs=2] [--count=6] [--thing=2/169]
 //

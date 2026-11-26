@@ -7,9 +7,10 @@ export default interface AgentEvent
     kind: "speech" | "arrival" | "departure" | "roomEntered" | "roomChangeRefused" | "roomReloading"
         | "blocksChanged" | "objectAdded" | "objectRemoved" | "objectChanged" | "dollarCollected" | "loginReward"
         | "cannonBallHit";
-    // The player it concerns (speech, arrival, departure), or who added an object.
+    // The player it concerns (speech, arrival, departure), or who added an object; or the pet that spoke, by its name.
     who?: string;
     whoIsAgent?: boolean;
+    whoIsPet?: boolean;
     // What they said (speech).
     text?: string;
     // The room entered.

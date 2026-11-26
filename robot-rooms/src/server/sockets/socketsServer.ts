@@ -20,12 +20,15 @@ import EditRateLogUtil from "../user/util/editRateLogUtil";
 import PlayerMessageExpiryUtil from "../user/util/playerMessageExpiryUtil";
 import AgentBodyUtil from "../agent/util/agentBodyUtil";
 import HelperAgentUtil from "../agent/util/helperAgentUtil";
+import PetChatUtil from "../agent/util/petChatUtil";
 import AgentTypingUtil from "../agent/util/agentTypingUtil";
 import AgentCameraUtil from "../agent/util/agentCameraUtil";
 import AgentUserContext from "../agent/types/agentUserContext";
 import DollarBillUtil from "../inventory/util/dollarBillUtil";
 import CannonUtil from "../object/util/cannonUtil";
 import CannonBallUtil from "../object/util/cannonBallUtil";
+import PetPathServerUtil from "../object/util/petPathServerUtil";
+import PetPlayUtil from "../object/util/petPlayUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -113,14 +116,18 @@ const SocketsServer =
             }
         });
 
-        // Signals are batched and flushed on an interval. Agents' bodies, dollar bills, cannon balls, cannons and walking
-        // helpers move first (balls ahead of the cannons that fire them, so that a new one flies from the next flush,
-        // and ahead of the helpers they bounce off, which browsers fly them past where each was last shown), and
-        // messages and agents' typing whose time is up are cleared, so that their moves and clears go out with it.
+        // Signals are batched and flushed on an interval. Agents' bodies, pets, dollar bills, cannon balls, cannons and
+        // walking helpers move first (pets ahead of the balls that throw them; balls ahead of the cannons that fire them,
+        // so that a new one flies from the next flush, and ahead of the helpers they bounce off, which browsers fly them
+        // past where each was last shown), and messages and agents' typing whose time is up are cleared, so that their
+        // moves and clears go out with it.
         let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
             const now = Date.now();
             AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
+            PetPathServerUtil.stepAll((now - lastFlushAt) / 1000);
+            PetPlayUtil.stepAll((now - lastFlushAt) / 1000);
+            PetChatUtil.stepAll();
             DollarBillUtil.stepAll((now - lastFlushAt) / 1000);
             CannonBallUtil.stepAll((now - lastFlushAt) / 1000);
             CannonUtil.stepAll((now - lastFlushAt) / 1000);

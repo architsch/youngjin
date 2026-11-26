@@ -8,7 +8,10 @@ import UserContext from "../sockets/types/userContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
+import DBCacheUtil from "../db/util/dbCacheUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
+import DBUserWriteQueueUtil from "../db/util/dbUserWriteQueueUtil";
+import { COLLECTION_USERS } from "../system/serverConstants";
 import { HUB_ROOM_ID_KEYWORD, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import SpawnHotspotUtil from "./util/spawnHotspotUtil";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
@@ -31,6 +34,11 @@ import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 import AgentAwayLogUtil from "../agent/util/agentAwayLogUtil";
 import HelperAgentUtil from "../agent/util/helperAgentUtil";
 import DollarBillUtil from "../inventory/util/dollarBillUtil";
+import PetPathServerUtil from "../object/util/petPathServerUtil";
+import PetPlayUtil from "../object/util/petPlayUtil";
+
+// How many times a row that fails to be read is asked for as its user comes into a room.
+const PLAYER_METADATA_READ_ATTEMPTS = 3;
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -124,9 +132,11 @@ const ServerRoomManager =
             }));
         }
     },
-    // Batch-saves every connected user's player metadata (graceful shutdown).
+    // Batch-saves every connected user's player metadata (graceful shutdown), once the writes under way have landed,
+    // which are older (see DBUserWriteQueueUtil).
     saveAllUsersPlayerMetadata: async (socketUserContextsByUserID: {[userID: string]: UserContext}) =>
     {
+        await DBUserWriteQueueUtil.drain();
         const updates: Array<{userID: string; playerMetadata: {[key: string]: string}}> = [];
 
         for (const userID of Object.keys(socketUserContextsByUserID))
@@ -203,17 +213,9 @@ const ServerRoomManager =
         await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 
         // Metadata resolution: (1) the recent-disconnect buffer (bridges an unfinished DB write),
-        // (2) DBUser.playerMetadata, (3) empty.
-        let playerMetadata: {[key: string]: string} = {};
-        const consumed = ServerUserManager.consumeRecentDisconnectMetadata(user.id);
-        if (consumed)
-            playerMetadata = consumed;
-        else
-        {
-            const dbUser = await DBUserUtil.findUserById(user.id);
-            if (dbUser && dbUser.playerMetadata)
-                playerMetadata = dbUser.playerMetadata;
-        }
+        // (2) DBUser.playerMetadata, or nothing known if the row can't be read (see readPlayerMetadata).
+        const playerMetadata = ServerUserManager.consumeRecentDisconnectMetadata(user.id)
+            ?? await readPlayerMetadata(user.id);
 
         // Joins during the async lookup above could fill the room; the "almost full" margin covers this.
 
@@ -238,6 +240,8 @@ const ServerRoomManager =
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         HelperAgentUtil.tellNewcomer(roomID, user.id);
         DollarBillUtil.tellNewcomer(roomID, user.id);
+        PetPathServerUtil.tellNewcomer(roomID, user.id);
+        PetPlayUtil.tellNewcomer(roomID, user.id);
         return {type: "success", newRoomID: roomID};
     },
     // An empty room ID or the hub keyword is resolved by the picker (hub load changes over time, so doors
@@ -369,6 +373,7 @@ const ServerRoomManager =
             if (isStillLoaded())
             {
                 HelperAgentUtil.restart(roomID);
+                PetPlayUtil.restart(roomID);
                 for (const socketUserContext of Object.values(socketRoomContexts[roomID].getUserContexts()))
                 {
                     socketUserContext.clearAllPendingSignalsToUser();
@@ -414,6 +419,24 @@ async function fallBackToHub(socketUserContext: UserContext, prevRoomShouldExist
         return {type: "rejected", reason: rejectionReason};
     return await ServerRoomManager.changeUserRoom(socketUserContext, fallbackRoomID,
         prevRoomShouldExist, savePlayerMetadata, false);
+}
+
+// What a user's row keeps of their player, read once the user's own writes of it have landed. undefined if the row
+// couldn't be read, which is not an empty one: a player that arrived on it would be saved over everything the row still
+// keeps as they left (see ServerUserManager.addUserToRoom). A row that is gone keeps nothing.
+async function readPlayerMetadata(userID: string): Promise<{[key: string]: string} | undefined>
+{
+    await DBUserWriteQueueUtil.settle(userID);
+    for (let attempt = 0; attempt < PLAYER_METADATA_READ_ATTEMPTS; ++attempt)
+    {
+        // From the row itself: a cached copy may be one a read begun before the last write put there after it.
+        DBCacheUtil.invalidate(COLLECTION_USERS, userID);
+        const result = await DBUserUtil.lookUpUserById(userID);
+        if (result.success)
+            return result.data[0]?.playerMetadata ?? {};
+    }
+    console.error(`ServerRoomManager :: Failed to read the player metadata (userID = ${userID})`);
+    return undefined;
 }
 
 // Removes the user from their current room (never from single-player rooms, which they were never added to).

@@ -19,6 +19,8 @@ import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 import MirrorObjectTypeConfig from "../types/objectTypeConfig/mirrorObjectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../types/objectTypeConfig/playerObjectTypeConfig";
+import PetListener from "../types/petListener";
+import PetListeners from "../types/petListeners";
 import BehaviorPrefsUtil from "./behaviorPrefsUtil";
 import CannonStateUtil from "./cannonStateUtil";
 import LabelTextUtil from "./labelTextUtil";
@@ -181,18 +183,28 @@ const HelperBehaviorUtil =
             wander(behavior, surroundings, now);
     },
     // Of the helpers in a room, the one a line is for: one it names, else, of those in earshot of whoever said it (all of
-    // them, to one calling for a helper), the one they face, which the way they face decides before nearness does.
-    pickListener: <T extends HelperBehavior>(helpers: T[], text: string, speaker: Vec3, facing: Vec3): T | undefined =>
+    // them, to one calling for a helper), the one they face, which the way they face decides before nearness does. The
+    // room's pets may hear the line too (see PetListenerUtil), and it is for one of them instead where it names that one
+    // and no helper, or where that is the one they face: a line is for one listener, or none.
+    pickListener: <T extends HelperBehavior>(helpers: T[], text: string, speaker: Vec3, facing: Vec3,
+        pets: PetListeners): {helper: T | undefined, pet: PetListener | undefined} =>
     {
         const named = helpers.find(helper => helper.name.length > 0 && namedIn(text, helper.name));
         if (named != undefined)
-            return named;
+            return {helper: named, pet: undefined};
+        if (pets.named != undefined)
+            return {helper: undefined, pet: pets.named};
+        // (One calling for a helper speaks to no pet.)
         const callsForHelper = namedIn(text, HELPER_AGENT_NAME);
-        const hearing = helpers.filter(helper => callsForHelper || HelperBehaviorUtil.isInEarshot(helper, speaker))
-            .map(helper => ({helper, off: degreesOffFacing(speaker, facing, helper.at)}));
+        const hearing = [
+            ...helpers.filter(helper => callsForHelper || HelperBehaviorUtil.isInEarshot(helper, speaker))
+                .map(helper => ({helper, pet: undefined, at: helper.at})),
+            ...(callsForHelper ? [] : pets.hearing).map(pet => ({helper: undefined, pet, at: pet.at})),
+        ].map(listener => ({...listener, off: degreesOffFacing(speaker, facing, listener.at)}));
         const leastOff = Math.min(...hearing.map(({off}) => off));
-        return hearing.filter(({off}) => off <= leastOff + FACING_TIE_DEGREES)
-            .sort((a, b) => distanceAcross(speaker, a.helper.at) - distanceAcross(speaker, b.helper.at))[0]?.helper;
+        const picked = hearing.filter(({off}) => off <= leastOff + FACING_TIE_DEGREES)
+            .sort((a, b) => distanceAcross(speaker, a.at) - distanceAcross(speaker, b.at))[0];
+        return {helper: picked?.helper, pet: picked?.pet};
     },
     // A line for it, once whoever plays it has kept it to answer: it turns to whoever said it, unless it is still
     // speaking to someone else, and is shown thinking of an answer at once. A chat with another helper ends for it, as

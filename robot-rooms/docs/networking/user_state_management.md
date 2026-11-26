@@ -19,7 +19,10 @@ Single-player rooms differ from these flows (see [single_player_mode.md](single_
 3. The server leaves the old room (despawns the player and optionally flushes metadata), spawns the user behind a [door](../geometry/room_entrance.md) with restored metadata, writes the last room to `DBUser` and notifies the client.
 
 ## Player metadata across sessions
-On join, metadata is resolved from: **(1)** an in-memory recent-disconnect buffer, **(2)** `DBUser`, **(3)** empty.
+On join, metadata is resolved from: **(1)** an in-memory recent-disconnect buffer, **(2)** `DBUser`, read past the cache once the user's own writes have landed, **(3)** empty, for a row that is gone.
+
+- **A row that couldn't be read is not an empty one**: the player then arrives without its metadata, marked so, and is never saved over the row, which still holds it (their [pets](../gameplay/pet.md) among it).
+- **A user's writes of their row go one at a time**, in the order asked (`DBUserWriteQueueUtil`): the save as they leave, and each change of which pets they own, which writes that one key and their dollars in a transaction, leaving the rest alone (`DBPetUtil`). A shutdown waits for them.
 
 The buffer is filled synchronously whenever a session ends (disconnect, or eviction by a newer socket), before the asynchronous DB write. It covers:
 - **Close and reopen**: the reconnect reads the buffer if the DB write has not landed yet.

@@ -76,7 +76,7 @@ label font and the dollar bill texture under `public/app/assets/resources/` are 
 main examples: the packs and the bill are public domain, and the font is under the
 SIL Open Font License. So are the recordings under `public/app/assets/audio/BigSoundBank/`
 and `public/app/assets/audio/Freesound/`, which are public domain and are cut into
-some of the game's sounds, beside its own in `public/app/assets/audio/bundle.mp3`. So are the
+some of the game's sounds, beside its own in `public/app/assets/audio/bundle*.mp3`. So are the
 photographs of everyday objects in the pictures' subfolder `2/` whose entries in
 `public/app/assets/pictures/manifest.json` name a source and license, which ship
 under `public/app/assets/pictures/2/` once enabled and are parked under

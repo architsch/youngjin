@@ -2,7 +2,8 @@
 [ -d ssg/node_modules ] || { echo "❌ ssg/node_modules is missing. Run 'npm ci' in ssg/ first."; exit 1; }
 (cd ssg && node build.ts --check && node --test)
 
-# The game: its bundles are production builds, and its integration tests pass.
+# The game: its bundles are production builds, its tests type-check, and its integration tests pass.
 cd robot-rooms
 node dev/scripts/checkBeforeCommit.js
+npm run test:types
 npm run test:integration

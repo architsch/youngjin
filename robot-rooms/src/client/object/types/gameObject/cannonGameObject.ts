@@ -20,7 +20,7 @@ import { cannonFiredObservable, cannonScrappedObservable } from "../../../system
 // Its gears, heard from its pivot, from farther off than it fires, while it turns to aim at someone, by more than
 // this many radians, and for this long after the last frame it did, in seconds, so that a wait for the server's next
 // word leaves no gap in them.
-export const TURN_SOUND_VOLUME = 0.6;
+export const TURN_SOUND_VOLUME = 1.2;
 export const TURN_SOUND_RANGE = 22;
 const TURN_SOUND_MIN_ANGLE = 0.01;
 const TURN_SOUND_HOLD_SECONDS = 0.12;

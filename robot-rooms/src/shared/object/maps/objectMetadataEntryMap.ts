@@ -19,6 +19,10 @@ import SpeakerActivityUtil from "../util/speakerActivityUtil";
 import NpcFacingUtil from "../util/npcFacingUtil";
 import ObjectTagUtil from "../util/objectTagUtil";
 import CannonStateUtil from "../util/cannonStateUtil";
+import PetIdentityUtil from "../util/petIdentityUtil";
+import PetNeedsUtil from "../util/petNeedsUtil";
+import PetRecordUtil from "../util/petRecordUtil";
+import PetShownStateUtil from "../util/petShownStateUtil";
 import User from "../../user/types/user";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
@@ -125,6 +129,23 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     // Set in two parts, of which a user may set the first alone (see CannonStateUtil.merge).
     [ObjectMetadataKeyEnumMap.CannonState]: {
         preprocessingMethod: (rawValue: string, currentValue?: string) => CannonStateUtil.merge(rawValue, currentValue),
+    },
+    // Round-tripped as AdminPrefs is, through PetIdentityUtil, and likewise the two below.
+    [ObjectMetadataKeyEnumMap.PetIdentity]: {
+        preprocessingMethod: (rawValue: string) => PetIdentityUtil.canonicalize(rawValue),
+    },
+    [ObjectMetadataKeyEnumMap.PetState]: {
+        preprocessingMethod: (rawValue: string) => PetShownStateUtil.canonicalize(rawValue),
+    },
+    // The server's alone (see PetServerUtil).
+    [ObjectMetadataKeyEnumMap.PetNeeds]: {
+        preprocessingMethod: (rawValue: string) => PetNeedsUtil.encode(PetNeedsUtil.decode(rawValue)),
+        canUserSet: (_user: User) => false,
+    },
+    // A user sets only how the pets it lists are (see PetRecordUtil.merge). Theirs to set otherwise, so that it is
+    // restored with their player as they arrive (see ServerUserManager.addUserToRoom).
+    [ObjectMetadataKeyEnumMap.Pets]: {
+        preprocessingMethod: (rawValue: string, currentValue?: string) => PetRecordUtil.merge(rawValue, currentValue),
     },
 };
 

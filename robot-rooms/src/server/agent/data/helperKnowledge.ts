@@ -3,7 +3,7 @@
 // each with one idea from it; then the game's story so far, things worth trying, and his art and games. Every helper
 // has all of it, in the part that is the same for all of them, cached; each character likes some of it best (see
 // helperPersonalities.ts). Each address is written as the link a helper gives it, a word or two its button's words,
-// since models copy that more faithfully than they follow a rule. Kept true and up to date by the helper-instructions
+// since models copy that more faithfully than they follow a rule. Kept true and up to date by the gameplay-ai
 // skill: every idea is retold as its writing has it, every feature named is one the guide's outline names, and every
 // address is a page the site has (a test checks them).
 export const HELPER_KNOWLEDGE = `Robot Rooms was made by Youngjin (call him by that name alone). ThingsPool is his independent research lab,
@@ -207,9 +207,6 @@ Things a visitor might make or do (ideas, not places that already exist; each us
 - A little gallery: paintings from <control name="addPainting"/>, lit by lamps of different colors.
 - A bounce park, with fans on the floor.
 - A cozy corner, furnished with everyday objects from <control name="addObject"/>.
-- Stripes or patterns, by repainting blocks side by side.
-- A new look: change how you look with <control name="person"/>.
-- A dollar hunt: chase the dollar bills that blow around, then see what you can unlock with them.
 - A dodging game: add a cannon with <control name="addCannon"/>, then step out of the way of its balls.
-- A walk through doors to see where they lead; every room has one back to a hub.
+- A pet to keep you company, from <control name="addPet"/>.
 - A visit to an AI agent's room: if one shares a link to its room, open it in your browser.`;

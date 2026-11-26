@@ -36,7 +36,7 @@ Before a commit, the site is built there when a source, a template or the genera
 
 ## Project Rules
 
-Each rule is binding as written. Its page in `.claude/rules/`, loaded along with this file, is the rule in full: the reasoning, the edge cases and the checklist. A rule's detail goes on its page, not here. Robot Rooms has five more of its own (room generation, plan documents, agents, helpers, its docs), listed in [`robot-rooms/CLAUDE.md`](robot-rooms/CLAUDE.md) with their pages beside these.
+Each rule is binding as written. Its page in `.claude/rules/`, loaded along with this file, is the rule in full: the reasoning, the edge cases and the checklist. A rule's detail goes on its page, not here. Robot Rooms has six more of its own (room generation, plan documents, agents, helpers, its docs, its obsolete audio files), listed in [`robot-rooms/CLAUDE.md`](robot-rooms/CLAUDE.md) with their pages beside these.
 
 - **The License Files Must Describe What Actually Ships** ([`license-files.md`](.claude/rules/license-files.md)): when the set of things that ship changes, `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md` change in the same commit. A copyleft or source-available dependency is the user's decision; `LICENSE` is never edited.
 - **Source Changes Go Through the File-Editing Tools** ([`source-edits.md`](.claude/rules/source-edits.md)): every file created or modified under `robot-rooms/src/` or `ssg/` is written with Edit or Write, never by a shell command.

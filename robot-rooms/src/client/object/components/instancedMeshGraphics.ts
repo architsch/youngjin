@@ -3,6 +3,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import MaterialParams from "../../../shared/graphics/material/types/materialParams";
 import InstancedMeshBinding from "../../graphics/types/mesh/instancedMeshBinding";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import EmissiveGlyph from "../../../shared/graphics/mesh/composition/types/emissiveGlyph";
 
 // instancedMeshId = MeshDataUtil.getInstancedMeshId(geometryId, materialId)
 const bindingMap: {[instancedMeshId: string]: InstancedMeshBinding } = {};
@@ -132,6 +133,18 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     updateInstanceTextureTurns(instancedMeshId: string, instanceId: number, quarterTurns: number)
     {
         bindingMap[instancedMeshId].updateInstanceTextureTurns(this.gameObject, instanceId, quarterTurns);
+    }
+
+    // See InstancedMeshBinding.updateInstanceRust.
+    updateInstanceRust(instancedMeshId: string, instanceId: number, rust: number)
+    {
+        bindingMap[instancedMeshId].updateInstanceRust(instanceId, rust);
+    }
+
+    // See InstancedMeshBinding.updateInstanceGlyph.
+    updateInstanceGlyph(instancedMeshId: string, instanceId: number, glyph: EmissiveGlyph | undefined, dims: boolean)
+    {
+        bindingMap[instancedMeshId].updateInstanceGlyph(instanceId, glyph, dims);
     }
 
     // See InstancedMeshBinding.drawImageAtTexel. Addressed by mesh, since what is drawn may be shared by

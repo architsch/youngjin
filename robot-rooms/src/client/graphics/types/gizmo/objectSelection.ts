@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject/gameObject";
-import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
+import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable, playModeSelectionObservable,
     roomChangedObservable, selectionEditBlockedObservable, updateObservable } from "../../../system/clientObservables";
+import Vec3 from "../../../../shared/math/types/vec3";
+import WorldSpaceOutlineBox from "./generic/worldSpaceOutlineBox";
 import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR } from "../../../system/clientConstants";
 import GraphicsManager from "../../graphicsManager";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
@@ -73,15 +75,37 @@ export default class ObjectSelection
 }
 
 let selectionOutline: WorldSpaceOutlineRect | null = null;
+// For a type outlined as a box about its body (see ObjectTypeClientConfig).
+let selectionBoxOutline: WorldSpaceOutlineBox | null = null;
 
+// The object outlined: the selection, or the one selected in play mode (see PlayModeSelectionUtil).
+function getOutlinedObject(): GameObject | null
+{
+    return objectSelectionObservable.peek()?.gameObject ?? playModeSelectionObservable.peek();
+}
+
+function getOutlineBoxSize(go: GameObject): Vec3 | undefined
+{
+    return ObjectTypeClientConfigMap.getConfigByIndex(go.params.objectTypeIndex).selection?.outlineBoxSize;
+}
+
+// A box goes about the object's middle, turned as it is, and up with whatever motion its looks alone make (a hop).
 // Attached objects are outlined on their face; other objects on the ground beneath their collider;
 // collider-less objects use their own transform.
-function refreshSelectionOutline(selection: ObjectSelection)
+function refreshSelectionOutline(go: GameObject)
 {
+    const boxSize = getOutlineBoxSize(go);
+    if (boxSize != undefined)
+    {
+        outlinePos.copy(go.position);
+        outlinePos.y += go.visualObj.position.y;
+        selectionBoxOutline?.setBox(outlinePos, boxSize);
+        selectionBoxOutline?.setOrientation(go.quaternion);
+        return;
+    }
     if (!selectionOutline)
         return;
 
-    const go = selection.gameObject;
     const config = ObjectTypeConfigMap.getConfigByIndex(go.params.objectTypeIndex);
 
     if (!config.components.spawnedByAny?.collider)
@@ -107,37 +131,74 @@ function refreshSelectionOutline(selection: ObjectSelection)
     selectionOutline.setTransformRaw(outlinePos, outlineQuat, outlineScale);
 }
 
-objectSelectionObservable.addListener("objectSelection", async (selection: ObjectSelection | null) => {
-    if (!selection)
+// Makes the outline the selected object's type takes, the first time one is needed: nothing to wait for otherwise.
+function makeSelectionOutline(): Promise<void> | undefined
+{
+    const selected = getOutlinedObject();
+    if (selected == null)
+        return undefined;
+    if (getOutlineBoxSize(selected) != undefined)
+        return (selectionBoxOutline == null) ? makeBoxOutline() : undefined;
+    return (selectionOutline == null) ? makeRectOutline() : undefined;
+}
+async function makeBoxOutline(): Promise<void>
+{
+    const outline = await WorldSpaceOutlineBox.create(SELECTION_COLOR);
+    // (Another selection may have made one meanwhile.)
+    if (selectionBoxOutline != null)
     {
-        selectionOutline?.setVisible(false);
+        outline.dispose();
         return;
     }
+    selectionBoxOutline = outline;
+    outline.addToParent(GraphicsManager.getScene());
+}
+async function makeRectOutline(): Promise<void>
+{
+    selectionOutline = await WorldSpaceOutlineRect.create(SELECTION_COLOR);
+    selectionOutline.addToParent(GraphicsManager.getScene());
+}
 
-    // Initialize the outline if it hasn't been initialized yet.
-    if (selectionOutline == null)
-    {
-        selectionOutline = await WorldSpaceOutlineRect.create(SELECTION_COLOR);
-        selectionOutline.addToParent(GraphicsManager.getScene());
-    }
-
-    refreshSelectionOutline(selection);
+// Shows the outline of whatever is selected now, if anything, of the kind its type takes.
+function showSelectionOutline(): void
+{
+    const go = getOutlinedObject();
+    const boxed = go != null && getOutlineBoxSize(go) != undefined;
+    if (go != null)
+        refreshSelectionOutline(go);
     // (A type that outlines its own selection is left to; see ObjectTypeClientConfig.)
-    selectionOutline.setVisible(!ObjectTypeClientConfigMap.getConfigByIndex(
-        selection.gameObject.params.objectTypeIndex).selection?.selectedByOwnControl);
+    selectionOutline?.setVisible(go != null && !boxed && !ObjectTypeClientConfigMap.getConfigByIndex(
+        go.params.objectTypeIndex).selection?.selectedByOwnControl);
+    selectionBoxOutline?.setVisible(boxed);
+}
 
-    WorldSpaceSelectionUtil.unselectOthers("object");
+// (Both at once, unless an outline has first to be made.)
+objectSelectionObservable.addListener("objectSelection", async (selection: ObjectSelection | null) => {
+    const made = makeSelectionOutline();
+    if (made != undefined)
+        await made;
+    showSelectionOutline();
+    if (selection)
+        WorldSpaceSelectionUtil.unselectOthers("object");
+});
+playModeSelectionObservable.addListener("objectSelection", async () => {
+    const made = makeSelectionOutline();
+    if (made != undefined)
+        await made;
+    showSelectionOutline();
 });
 
 selectionEditBlockedObservable.addListener("objectSelection", (blocked: boolean) => {
-    selectionOutline?.setColor(blocked ? SELECTION_BLOCKED_COLOR : SELECTION_COLOR);
+    const color = blocked ? SELECTION_BLOCKED_COLOR : SELECTION_COLOR;
+    selectionOutline?.setColor(color);
+    selectionBoxOutline?.setLook(color, 1, true);
 });
 
 // Refreshed every frame, since a selected object can still move or change size (gizmo drags, falling).
 updateObservable.addListener("objectSelection", (_deltaTime: number) => {
-    const selection = objectSelectionObservable.peek();
-    if (selection && selectionOutline?.isVisible())
-        refreshSelectionOutline(selection);
+    const go = getOutlinedObject();
+    if (go != null && (selectionOutline?.isVisible() || selectionBoxOutline?.isVisible()))
+        refreshSelectionOutline(go);
 });
 
 // Forced: a room change overrides any selection lock from a scripted step.
@@ -148,5 +209,10 @@ roomChangedObservable.addListener("objectSelection", async (_roomRuntimeMemory: 
     {
         selectionOutline.dispose();
         selectionOutline = null;
+    }
+    if (selectionBoxOutline)
+    {
+        selectionBoxOutline.dispose();
+        selectionBoxOutline = null;
     }
 });

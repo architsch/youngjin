@@ -4,14 +4,17 @@
         "noEmit": true,
         "allowJs": true,
         "noImplicitAny": true,
-        "module": "es6",
+        "module": "esnext",
         "target": "es2020",
-        "jsx": "react",
+        "jsx": "react-jsx",
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
         "types": ["vitest/globals"],
-        "lib": ["ES2021.String"]
+        "lib": ["dom", "dom.iterable", "dom.asynciterable", "ES2022"]
     },
-    "include": ["./**/*", "../src/server/**/*", "../src/shared/**/*"]
+    "include": ["./**/*", "../src/server/**/*", "../src/shared/**/*", "../src/client/**/*.d.ts"],
+    "exclude": ["./e2e"]
 }

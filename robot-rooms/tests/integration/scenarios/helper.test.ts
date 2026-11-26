@@ -31,6 +31,25 @@ import { harness, ConnectedUser } from "../helpers/serverHarness";
 import HelperAgentUtil, { REFUSAL_RETOLD_AFTER_MS } from "../../../src/server/agent/util/helperAgentUtil";
 import HelperChatUtil, { SAVE_INTERVAL_MS, SHARED_PROMPT_MAX_LENGTH, TOPICS_PER_TALK }
     from "../../../src/server/agent/util/helperChatUtil";
+import PetChatUtil, { PET_ANSWER_PAUSE_MS } from "../../../src/server/agent/util/petChatUtil";
+import { PET_CHARACTER } from "../../../src/server/agent/data/petCharacter";
+import PetPlayUtil from "../../../src/server/object/util/petPlayUtil";
+import ServerObjectManager from "../../../src/server/object/serverObjectManager";
+import PetLineMap from "../../../src/shared/object/maps/petLineMap";
+// What pets chat in, as the server has it.
+import "../../../src/server/agent/data/petLines";
+import PetObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/petObjectTypeConfig";
+import ServerPetObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/serverPetObjectTypeConfig";
+import { PetActionEnumMap } from "../../../src/shared/object/types/petAction";
+import { PET_REACTION_MS } from "../../../src/shared/object/util/petBehaviorUtil";
+import PetBodyUtil from "../../../src/shared/object/util/petBodyUtil";
+import PetIdentityUtil, { PET_FIXED_ENERGIES, PET_FIXED_HEALTHS,
+    PET_TRAIT_LEVELS } from "../../../src/shared/object/util/petIdentityUtil";
+import { PET_HEARING_DISTANCE } from "../../../src/shared/object/util/petListenerUtil";
+import PetNeedsUtil from "../../../src/shared/object/util/petNeedsUtil";
+import PetShownStateUtil, { PET_BATTERY_LEVELS } from "../../../src/shared/object/util/petShownStateUtil";
+import PetZodiacUtil, { NUM_ZODIAC_SIGNS } from "../../../src/shared/object/util/petZodiacUtil";
+import User from "../../../src/shared/user/types/user";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
@@ -180,6 +199,8 @@ async function live(seconds: number, afterFlush?: () => void): Promise<void>
         {
             vi.setSystemTime(Date.now() + 200);
             AgentBodyUtil.stepAll(0.2);
+            PetPlayUtil.stepAll(0.2);
+            PetChatUtil.stepAll();
             HelperAgentUtil.stepAll(0.2);
             afterFlush?.();
         }
@@ -455,6 +476,7 @@ describe("helpers", () => {
         await harness.loadRoom(FIRST_HUB_ID);
         await harness.loadRoom(LATER_HUB_ID);
         HelperChatUtil.reset();
+        PetChatUtil.reset();
         shown.length = 0;
         const multicast = SocketRoomContext.prototype.multicastSignal;
         vi.spyOn(SocketRoomContext.prototype, "multicastSignal").mockImplementation(function (this: SocketRoomContext,
@@ -1233,7 +1255,7 @@ describe("helpers", () => {
         await turnToward(alice, bo);
         await talk(alice, "what should I build?");
         await live(6);
-        expect(heardBy(claude.requests.at(-1).body)).toBe("Cy");
+        expect(heardBy(claude.requests.at(-1)!.body)).toBe("Cy");
     });
 
     it("stands still for whoever near it types it a line, wherever it was going, facing them, and goes on a while after "
@@ -2868,7 +2890,8 @@ describe("helpers", () => {
         // in is told nothing of it, and nothing is said of it meanwhile.
         expect(helperIn(FIRST_HUB_ID, mira).at).toEqual(fileHome);
         expect(helperIn(FIRST_HUB_ID, mira).saying).toBe("");
-        expect(HelperAgentUtil.getCatchUpSignals(FIRST_HUB_ID).filter(({signal}) => signal.objectId == mira))
+        expect(HelperAgentUtil.getCatchUpSignals(FIRST_HUB_ID)
+            .filter(({signal}) => "objectId" in signal && signal.objectId == mira))
             .toEqual([]);
         expect(shown.filter(({signal}) => signal.objectId == mira)).toEqual([]);
 
@@ -2920,5 +2943,305 @@ describe("helpers", () => {
         // As an admin's name for it is set, the same way.
         await set(ObjectMetadataKeyEnumMap.Label, "Mia");
         expect(metadata[ObjectMetadataKeyEnumMap.Label].str).toBe("Mia");
+    });
+
+    describe("with pets in the room, which answer through Claude too", () => {
+        const PET_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(PetObjectTypeConfig.objectType);
+        const SERVER_PET_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(ServerPetObjectTypeConfig.objectType);
+        const ROOM_KEEPER = new User("id-Keeper", "Keeper", UserTypeEnumMap.Admin, "", "");
+        // By when a pet has surely turned to whoever spoke to it, and by when its answer has surely come, in seconds.
+        const TURN_SECONDS = Math.ceil(PET_REACTION_MS[1] / 1000) + 1;
+        const PET_ANSWER_SECONDS = Math.ceil(PET_ANSWER_PAUSE_MS / 1000) + 1;
+
+        function petSignal(owner: User, petId: string, name: string, floor: Vec3, objectTypeIndex: number): AddObjectSignal
+        {
+            const kept = objectTypeIndex == SERVER_PET_TYPE_INDEX;
+            const identity = {name, fixedHealthLevel: kept ? PET_FIXED_HEALTHS.length : 0,
+                fixedEnergyLevel: kept ? PET_FIXED_ENERGIES.length : 0, colorIndex: 0,
+                traits: {dependence: 1, sociability: 1, aggressiveness: 1, bravery: 1, curiosity: 1, zodiac: 0}};
+            return new AddObjectSignal(FIRST_HUB_ID, owner.id, owner.userName, objectTypeIndex, petId,
+                new ObjectTransform(PetBodyUtil.getStandingPos(floor), PetBodyUtil.getDir(0), {x: 1, y: 1, z: 1}),
+                {[ObjectMetadataKeyEnumMap.PetIdentity]: new EncodableByteString(PetIdentityUtil.encode(identity))});
+        }
+
+        // A pet its owner's browser plays, as the room holds it.
+        function standPet(owner: ConnectedUser, petId: string, name: string, floor: Vec3): void
+        {
+            ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById[petId] =
+                petSignal(owner.user, petId, name, floor, PET_TYPE_INDEX);
+        }
+
+        // What a pet's player was told of whoever speaks to it: that they have (""), and then what it answers.
+        function toldOf(petId: string): {to: string | undefined, text: string, mood: number, speakerObjectId: string}[]
+        {
+            return shown.filter(({signalType, signal}) => signalType == "petChatSignal" && signal.objectId == petId)
+                .map(({signal, userID}) => ({to: userID, text: signal.text, mood: signal.mood,
+                    speakerObjectId: signal.speakerObjectId}));
+        }
+
+        // Everything a request to Claude tells whoever is to answer of itself.
+        const toldIn = (body: any): string => (body.system as {text: string}[]).map(block => block.text).join("\n");
+
+        // What the room was last shown a pet busy with (see SpeakerActivity).
+        const activityOf = (petId: string): string | undefined => shown.filter(({signalType, signal}) =>
+            signalType == "setObjectMetadataSignal" && signal.objectId == petId
+            && signal.metadataKey == ObjectMetadataKeyEnumMap.Activity).map(({signal}) => signal.metadataValue).at(-1);
+
+        it("has the pet a line is said to answer it: its owner's browser is told at once that it was spoken to, and "
+            + "then what Claude has it say, with the face it says it with", async () => {
+            const alice = await joinPerson("Alice");
+            const bob = await joinPerson("Bob");
+            await walkIn(alice, 4, 3);
+            await walkIn(bob, 4);
+            const petFloor = inFrontOfEntrance(FIRST_HUB_ID, 6);
+            standPet(alice, "petAAAA1", "Rex", petFloor);
+            await turnToward(bob, petFloor);
+            shown.length = 0;
+            claude.answers.push("+Beep! Hello.");
+
+            await talk(bob, "hello there");
+            const bobObjectId = playerOf(bob.user.id).objectId;
+            expect(toldOf("petAAAA1")).toEqual([{to: alice.user.id, text: "", mood: 0, speakerObjectId: bobObjectId}]);
+            expect(claude.requests).toHaveLength(0);
+            // Shown thinking, as a helper is, until it has answered.
+            expect(PetChatUtil.isThinking(FIRST_HUB_ID, "petAAAA1")).toBe(true);
+            expect(activityOf("petAAAA1")).toBe(SpeakerActivityEnumMap.Typing);
+
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests).toHaveLength(1);
+            const {body} = claude.requests[0];
+            expect(body.model).toBe(HELPER_MODEL);
+            expect(toldIn(body)).toContain("Your name is Rex. Your human is Alice.");
+            expect(body.messages).toEqual([{role: "user", content: "(someone else) hello there"}]);
+            // Never by name, in what is said to it: only its human's, in what it is told of itself.
+            expect(JSON.stringify(body.messages)).not.toContain("Bob");
+            // Without the robot's sound it spelled out, which its voice makes.
+            expect(toldOf("petAAAA1")[1]).toEqual({to: alice.user.id, text: "Hello.", mood: 1,
+                speakerObjectId: bobObjectId});
+            expect(PetChatUtil.isThinking(FIRST_HUB_ID, "petAAAA1")).toBe(false);
+            expect(activityOf("petAAAA1")).toBe(SpeakerActivityEnumMap.None);
+            // Paid for from the helpers' day, and counted among its replies.
+            expect((HelperChatUtil.getUsageToday() as any).replies).toBe(1);
+            expect((HelperChatUtil.getUsageToday() as any).spentDollars).toBeGreaterThan(0);
+
+            // Its own human is told apart, and what was said before is remembered.
+            await turnToward(alice, petFloor);
+            claude.answers.push("-I missed you.");
+            await talk(alice, "did you miss me?");
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests).toHaveLength(2);
+            expect(claude.requests[1].body.messages).toEqual([{role: "user", content: "(your human) did you miss me?"}]);
+            expect(toldOf("petAAAA1").at(-1)).toMatchObject({text: "I missed you.", mood: -1});
+            claude.answers.push("=Bob again.");
+            await talk(bob, "me again");
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests[2].body.messages).toEqual([
+                {role: "user", content: "(someone else) hello there"},
+                {role: "assistant", content: "+Hello."},
+                {role: "user", content: "(someone else) me again"}]);
+            // Told its human's name only as a talk opens, or it says it in every line.
+            expect(toldIn(claude.requests[1].body)).toContain("Your human is Alice.");
+            expect(toldIn(claude.requests[2].body)).toContain("Your name is Rex.");
+            expect(toldIn(claude.requests[2].body)).not.toContain("Alice");
+        });
+
+        it("has a pet hear only who speaks near it on its floor, awake and charged, or whoever says its name", async () => {
+            const alice = await joinPerson("Alice");
+            await walkIn(alice, 4);
+            const petFloor = inFrontOfEntrance(FIRST_HUB_ID, 4 + PET_HEARING_DISTANCE + 1);
+            standPet(alice, "petAAAA1", "Rex", petFloor);
+            await turnToward(alice, petFloor);
+            shown.length = 0;
+
+            // Too far off to hear.
+            await talk(alice, "anyone there?");
+            expect(toldOf("petAAAA1")).toEqual([]);
+            // By its name, from anywhere in the room.
+            await talk(alice, "REX, come here");
+            expect(toldOf("petAAAA1")).toHaveLength(1);
+            // Near enough.
+            await walkIn(alice, 6);
+            await turnToward(alice, petFloor);
+            await talk(alice, "there you are");
+            expect(toldOf("petAAAA1")).toHaveLength(2);
+
+            // Asleep, or in a fright, it hears only its name; out of battery, nothing.
+            const pet = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById["petAAAA1"];
+            const show = (changes: object) => pet.metadata[ObjectMetadataKeyEnumMap.PetState] = new EncodableByteString(
+                PetShownStateUtil.encode({...PetShownStateUtil.decode(""), ...changes}));
+            for (const action of [PetActionEnumMap.Sleep, PetActionEnumMap.Panic])
+            {
+                show({action});
+                await talk(alice, "wake up");
+                expect(toldOf("petAAAA1")).toHaveLength(2);
+            }
+            await talk(alice, "Rex!");
+            expect(toldOf("petAAAA1")).toHaveLength(3);
+            show({powerless: true});
+            await talk(alice, "Rex?");
+            expect(toldOf("petAAAA1")).toHaveLength(3);
+        });
+
+        it("has one listener answer a line, helper or pet: the one it names, or else the one the speaker faces", async () => {
+            const alice = await joinPerson("Alice");
+            const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 6, -2));
+            const miraFloor = inFrontOfEntrance(FIRST_HUB_ID, 6, -2);
+            const petFloor = inFrontOfEntrance(FIRST_HUB_ID, 6, 2);
+            await walkIn(alice, 4);
+            standPet(alice, "petAAAA1", "Rex", petFloor);
+            // Greeted and settled.
+            await live(8);
+            shown.length = 0;
+            const answeredBy = async (line: string): Promise<string> => {
+                const before = claude.requests.length;
+                await talk(alice, line);
+                await live(ANSWER_SECONDS + 1);
+                expect(claude.requests).toHaveLength(before + 1);
+                return toldIn(claude.requests[before].body).match(/Your name is (\w+)\./)?.[1] ?? "";
+            };
+
+            await turnToward(alice, miraFloor);
+            expect(await answeredBy("what is this place?")).toBe("Mira");
+            await turnToward(alice, petFloor);
+            expect(await answeredBy("and what are you?")).toBe("Rex");
+            // A name decides it, whichever way they face.
+            expect(await answeredBy("Mira, hello")).toBe("Mira");
+            await turnToward(alice, miraFloor);
+            expect(await answeredBy("hello rex")).toBe("Rex");
+            // The helper was never shown thinking of what the pet answered.
+            expect(toldOf("petAAAA1").filter(told => told.text.length > 0)).toHaveLength(2);
+        });
+
+        it("has a pet the room keeps answer by itself, turned to whoever spoke to it", async () => {
+            const alice = await joinPerson("Alice");
+            await walkIn(alice, 4);
+            const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
+            const petFloor = inFrontOfEntrance(FIRST_HUB_ID, 6);
+            expect(ServerObjectManager.addObjectAsServer(room, ROOM_KEEPER,
+                petSignal(ROOM_KEEPER, "petAAAA1", "Bolt", petFloor, SERVER_PET_TYPE_INDEX))).toBe(true);
+            await live(1);
+            await turnToward(alice, petFloor);
+            shown.length = 0;
+            claude.answers.push("=I live here.");
+
+            await talk(alice, "who are you?");
+            await live(PET_ANSWER_SECONDS + TURN_SECONDS);
+            // Nobody's browser is told: the server plays it.
+            expect(toldOf("petAAAA1")).toEqual([]);
+            expect(saidBy("petAAAA1")).toContain("I live here.");
+            const state = PetShownStateUtil.getObjectState(room.objectById["petAAAA1"]);
+            expect(state.action).toBe(PetActionEnumMap.Chat);
+            expect(state.targetId).toBe(playerOf(alice.user.id).objectId);
+        });
+
+        it("has a pet answer in a fixed word or two when no answer can be had", async () => {
+            const alice = await joinPerson("Alice");
+            await walkIn(alice, 4);
+            const petFloor = inFrontOfEntrance(FIRST_HUB_ID, 6);
+            standPet(alice, "petAAAA1", "Rex", petFloor);
+            await turnToward(alice, petFloor);
+            shown.length = 0;
+            const fixedLines = PetLineMap.getAllLines().map(line => line.text);
+
+            delete process.env.ANTHROPIC_API_KEY;
+            await talk(alice, "hello");
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests).toHaveLength(0);
+            expect(fixedLines).toContain(toldOf("petAAAA1").at(-1)!.text);
+
+            // Likewise when Claude fails, or writes nothing a bubble can hold.
+            process.env.ANTHROPIC_API_KEY = "test-key";
+            claude.failing = true;
+            await talk(alice, "hello?");
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests).toHaveLength(1);
+            expect(fixedLines).toContain(toldOf("petAAAA1").at(-1)!.text);
+            claude.failing = false;
+            claude.answers.push("+");
+            await talk(alice, "hello!");
+            await live(PET_ANSWER_SECONDS);
+            expect(claude.requests).toHaveLength(2);
+            expect(fixedLines).toContain(toldOf("petAAAA1").at(-1)!.text);
+        });
+
+        it("reads a pet's line as the sign of its face, then plain words no longer than a bubble", () => {
+            expect(PetChatUtil.readLine("+I like it here!")).toEqual({text: "I like it here!", mood: 1});
+            expect(PetChatUtil.readLine(" - My wheels squeak.")).toEqual({text: "My wheels squeak.", mood: -1});
+            expect(PetChatUtil.readLine("=Hmm.")).toEqual({text: "Hmm.", mood: 0});
+            expect(PetChatUtil.readLine("Hello, no sign.")).toEqual({text: "Hello, no sign.", mood: 0});
+            expect(PetChatUtil.readLine("\"+Hello!\"")).toEqual({text: "Hello!", mood: 1});
+            // Nothing a bubble would show as a button or a picture, nor marks of emphasis.
+            expect(PetChatUtil.readLine("+See <link href=\"https://example.com\">this</link> **now**"))
+                .toEqual({text: "See this now", mood: 1});
+            expect(PetChatUtil.readLine("=Look at https://example.com/page please")?.text).toBe("Look at please");
+            expect(PetChatUtil.readLine("=Give me <control name=\"battery\"/> soon")?.text).toBe("Give me soon");
+            expect(PetChatUtil.readLine("+")).toBeUndefined();
+            expect(PetChatUtil.readLine("   ")).toBeUndefined();
+            const long = PetChatUtil.readLine(`+${"Roll on. ".repeat(20)}`)!;
+            expect(MessageLinkUtil.getVisibleLength(long.text)).toBeLessThanOrEqual(OBJECT_MESSAGE_MAX_LENGTH);
+            expect(MessageLinkUtil.getVisibleLength(long.text)).toBeGreaterThan(0);
+        });
+
+        it("reads a pet's line without a robot's sounds spelled out as words of their own, which its voice makes", () => {
+            const read = (written: string) => PetChatUtil.readLine(written)?.text;
+            expect(read("+Beep! Hello.")).toBe("Hello.");
+            expect(read("+Beep boop! I like you!")).toBe("I like you!");
+            expect(read("-Bzzt... I'm tired.")).toBe("I'm tired.");
+            expect(read("+I like you! Beep!")).toBe("I like you!");
+            expect(read("=Hi. Whirr, I like it here.")).toBe("Hi. I like it here.");
+            expect(read("+BEEEP-boop! Hi.")).toBe("Hi.");
+            // What is left begins with a capital.
+            expect(read("+Beep, hello!")).toBe("Hello!");
+            // Nothing but sounds is no line at all.
+            expect(read("=Beep beep?")).toBeUndefined();
+            // A word that only begins like one, or one used in a sentence, stays.
+            expect(read("=The beeper is loud.")).toBe("The beeper is loud.");
+            expect(read("+I go beep when I'm happy.")).toBe("I go beep when I'm happy.");
+        });
+
+        it("tells a pet how to talk, who it is and how it is, and nothing of its sign", async () => {
+            const alice = await joinPerson("Alice");
+            const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
+            standPet(alice, "petAAAA1", "Rex", inFrontOfEntrance(FIRST_HUB_ID, 6));
+            const told = PetChatUtil.getInstructions(room.objectById["petAAAA1"], PetNeedsUtil.getFresh(), true);
+            expect(told).toContain("Your name is Rex. Your human is Alice.");
+            expect(PetChatUtil.getInstructions(room.objectById["petAAAA1"], PetNeedsUtil.getFresh(), false))
+                .not.toContain("Alice");
+            // How it is told it is follows how it is.
+            const worn = PetChatUtil.getInstructions(room.objectById["petAAAA1"],
+                {...PetNeedsUtil.getFresh(), health: 0.1, anger: 1, horror: 1, fatigue: 1}, true);
+            for (const state of [PET_CHARACTER.body[0], PET_CHARACTER.angry, PET_CHARACTER.frightened, PET_CHARACTER.sleepy])
+                expect(worn).toContain(state);
+            expect(worn).not.toContain(PET_CHARACTER.fine);
+            for (const trait of [PET_CHARACTER.dependence[1], PET_CHARACTER.sociability[1], PET_CHARACTER.aggressiveness[1],
+                PET_CHARACTER.bravery[1], PET_CHARACTER.battery[PET_CHARACTER.battery.length - 1], PET_CHARACTER.body[2],
+                PET_CHARACTER.fine])
+            {
+                expect(told).toContain(trait);
+            }
+            expect(PET_CHARACTER.quirks.filter(quirk => told.includes(quirk))).toHaveLength(1);
+            for (let sign = 0; sign < NUM_ZODIAC_SIGNS; ++sign)
+                expect(told).not.toContain(PetZodiacUtil.getName(sign));
+            // Every level of every trait has words of its own, and every state.
+            for (const levels of [PET_CHARACTER.dependence, PET_CHARACTER.sociability, PET_CHARACTER.aggressiveness,
+                PET_CHARACTER.bravery])
+            {
+                expect(new Set(levels).size).toBe(PET_TRAIT_LEVELS);
+            }
+            expect(PET_CHARACTER.battery).toHaveLength(PET_BATTERY_LEVELS);
+            expect(PET_CHARACTER.fixedBody).toHaveLength(PET_CHARACTER.body.length);
+            // One the room keeps is told of its body by the health it is kept at, the rustier the less, however it is.
+            const keptBodies = PET_FIXED_HEALTHS.map((_, i) => {
+                const kept = petSignal(ROOM_KEEPER, "petAAAA2", "Bolt", inFrontOfEntrance(FIRST_HUB_ID, 6),
+                    SERVER_PET_TYPE_INDEX);
+                kept.metadata[ObjectMetadataKeyEnumMap.PetIdentity] = new EncodableByteString(PetIdentityUtil.encode(
+                    {...PetIdentityUtil.getObjectIdentity(kept), fixedHealthLevel: i + 1}));
+                const toldKept = PetChatUtil.getInstructions(kept, PetNeedsUtil.getFresh(), false);
+                return PET_CHARACTER.fixedBody.findIndex(body => toldKept.includes(body));
+            });
+            expect(keptBodies[0]).toBe(0);
+            expect(keptBodies[keptBodies.length - 1]).toBe(PET_CHARACTER.fixedBody.length - 1);
+            keptBodies.slice(1).forEach((body, i) => expect(body).toBeGreaterThanOrEqual(keptBodies[i]));
+        });
     });
 });

@@ -1,6 +1,7 @@
 /**
  * Integration tests: walking paths over the voxel grid (VoxelPathUtil) — where a body can stand, ways around and
- * through walls, climbing one layer at a time and dropping from ledges, and refusing what nobody could reach.
+ * through walls, climbing one layer at a time and dropping from ledges, refusing what nobody could reach, and where a
+ * body walks straight across a floor.
  */
 import { describe, it, expect } from "vitest";
 import VoxelPathUtil, { BODY_LAYERS, MAX_DROP_LAYERS } from "../../../src/shared/voxel/util/voxelPathUtil";
@@ -124,6 +125,54 @@ describe("walking paths", () => {
                 expect(VoxelPathUtil.isStandable(voxels, between), JSON.stringify(between)).toBe(true);
             }
         }
+    });
+
+    it("walks straight across a layer's floor where a body could stand all along the line, and nowhere else", () => {
+        const at = (row: number, col: number, layer: number = 0) => VoxelPathUtil.toWorld(vertex(row, col, layer));
+        const open = openGrid();
+        // At any slant, between points off the grid's vertices too.
+        expect(VoxelPathUtil.canWalkStraight(open, {x: 5.1, y: 0, z: 5.3}, {x: 17.8, y: 0, z: 11.6}, 0)).toBe(true);
+        // Never onto what the caller shuts.
+        expect(VoxelPathUtil.canWalkStraight(open, at(10, 10), at(10, 30), 0, step => step.col != 20)).toBe(false);
+
+        // Not through a pillar, but past it with room to spare.
+        const pillar = openGrid();
+        fill(pillar, [20, 20], [20, 20], ALL_LAYERS);
+        expect(VoxelPathUtil.canWalkStraight(pillar, {x: 5.25, y: 0, z: 10.25}, {x: 15.25, y: 0, z: 10.25}, 0)).toBe(false);
+        expect(VoxelPathUtil.canWalkStraight(pillar, at(18, 10), at(18, 30), 0)).toBe(true);
+
+        // Through a gap in a wall two voxels wide, but not one.
+        const wide = openGrid();
+        fill(wide, [1, 29], [30, 30], ALL_LAYERS);
+        fill(wide, [32, 62], [30, 30], ALL_LAYERS);
+        expect(VoxelPathUtil.canWalkStraight(wide, at(31, 20), at(31, 40), 0)).toBe(true);
+        const narrow = openGrid();
+        fill(narrow, [1, 29], [30, 30], ALL_LAYERS);
+        fill(narrow, [31, 62], [30, 30], ALL_LAYERS);
+        expect(VoxelPathUtil.canWalkStraight(narrow, {x: 10, y: 0, z: 15.25}, {x: 20, y: 0, z: 15.25}, 0)).toBe(false);
+
+        // Not up onto a platform, a way's climb, though across its top.
+        const platform = openGrid();
+        fill(platform, [20, 30], [20, 30], [0, 0]);
+        expect(VoxelPathUtil.canWalkStraight(platform, at(25, 10), at(25, 40), 0)).toBe(false);
+        expect(VoxelPathUtil.canWalkStraight(platform, at(22, 22, 1), at(28, 28, 1), 1)).toBe(true);
+
+        // Over a trench a voxel wide, which a body is wider than, but not one two wide.
+        const trench = (width: number) => {
+            const voxels = openGrid();
+            fill(voxels, [1, 62], [1, 19], [0, 0]);
+            fill(voxels, [1, 62], [20 + width, 62], [0, 0]);
+            return voxels;
+        };
+        expect(VoxelPathUtil.canWalkStraight(trench(1), at(30, 10, 1), at(30, 30, 1), 1)).toBe(true);
+        expect(VoxelPathUtil.canWalkStraight(trench(2), at(30, 10, 1), at(30, 30, 1), 1)).toBe(false);
+
+        // Under a ceiling only a lower walker clears.
+        const low = openGrid();
+        fill(low, [20, 30], [20, 30], [3, 3]);
+        expect(VoxelPathUtil.canWalkStraight(low, at(25, 10), at(25, 40), 0)).toBe(false);
+        expect(VoxelPathUtil.canWalkStraight(low, at(25, 10), at(25, 40), 0, undefined, {bodyLayers: 3, climbLayers: 1}))
+            .toBe(true);
     });
 
     it("reaches everywhere a body can walk to within a walk's length, round a wall too, each by a way of single steps",

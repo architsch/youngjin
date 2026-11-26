@@ -1,18 +1,12 @@
 import { ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import IconButton from "../../input/iconButton";
+import Button from "../../input/button";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import AddBlockIcon from "../../../svg/icons/addBlockIcon";
-import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
-import AddPropIcon from "../../../svg/icons/addPropIcon";
-import AddDoorIcon from "../../../svg/icons/addDoorIcon";
-import AddLampIcon from "../../../svg/icons/addLampIcon";
-import AddFanIcon from "../../../svg/icons/addFanIcon";
-import AddCannonIcon from "../../../svg/icons/addCannonIcon";
-import AddLabelIcon from "../../../svg/icons/addLabelIcon";
-import AddNpcIcon from "../../../svg/icons/addNpcIcon";
-import AddMirrorIcon from "../../../svg/icons/addMirrorIcon";
 import AddVolumeIcon from "../../../svg/icons/addVolumeIcon";
+import SelectionSubmenu from "./selectionSubmenu";
+import PetGenerationUtil from "../../../util/petGenerationUtil";
 import App from "../../../../app";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
 import ObjectPlacementUtil from "../../../../object/util/objectPlacementUtil";
@@ -23,8 +17,8 @@ import VoxelEditUtil from "../../../../voxel/util/voxelEditUtil";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { clientFeatureFlagsObservable, dollarsInFlightObservable, inventoryObservable,
     volumesShownObservable } from "../../../../system/clientObservables";
-import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
-import { CANNON_PRICE_DOLLARS } from "../../../../../shared/system/sharedConstants";
+import { ADD_BUTTONS_IN_SUBMENUS, SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
+import { CANNON_PRICE_DOLLARS, PET_PRICE_DOLLARS } from "../../../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import ClientInventoryManager from "../../../../inventory/clientInventoryManager";
 import PriceTag from "../../basic/priceTag";
@@ -58,15 +52,29 @@ const placementFeatureFlags = [
     FeatureFlag.DisableManualObjectAddition,
 ];
 
-// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser its add button
-// raises in the place of the face's other tools (its children), and the pick adds it. The chooser shows beneath this
-// row, its add button a toggle, or in the place of this row too until it is closed (see
-// SUB_PANELS_BENEATH_SELECTION_TOOLS).
+// The kinds the add buttons are grouped by (see ADD_BUTTONS_IN_SUBMENUS): what dresses a room up, what moves by itself,
+// and what keeps it company. Each is a button in the tool row, by this id.
+type AddMenu = "decoration" | "machine" | "companion";
+const ADD_MENU_BUTTON_IDS: {[menu in AddMenu]: string} = {
+    decoration: "decorationMenuButton", machine: "machineMenuButton", companion: "companionMenuButton"};
+// Its text buttons are small, but their words as heavy as the other tools' (see Button).
+const TEXT_BUTTON_CLASS_NAMES = "shrink-0 font-semibold";
+// In a kind's column, the add buttons share one width, wide enough for the longest words there, so that they line up.
+const KIND_BUTTON_CLASS_NAMES = ADD_BUTTONS_IN_SUBMENUS ? `${TEXT_BUTTON_CLASS_NAMES} min-w-20` : TEXT_BUTTON_CLASS_NAMES;
+
+// Face tools: remove or add a block, or add an object. The objects are offered by kind: each kind's button raises its
+// add buttons in a column over it, and raising another kind's column puts away the one that was up (or every add
+// button is in the row itself; see ADD_BUTTONS_IN_SUBMENUS). An object's look is picked first, from a chooser its add
+// button raises in the place of the face's tools (this row and its children), and the pick adds it. The chooser's
+// close button returns to the row as it was, its column still up. A pet is generated from a popup of its own (see
+// GeneratePetForm).
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection, children?: ReactNode})
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
     // The type whose chooser is open, and the selection it was raised on: the next face selected has none open.
     const [chooser, setChooser] = useState<{typeIndex: number, selection: VoxelQuadSelection} | null>(null);
+    // The kind whose add buttons are raised, likewise.
+    const [raisedMenu, setRaisedMenu] = useState<{menu: AddMenu, selection: VoxelQuadSelection} | null>(null);
     // Whether a pick from a chooser beneath this row is still going up.
     const addingRef = useRef(false);
 
@@ -119,6 +127,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddVolume = managesVolumes && ObjectPlacementUtil.canAddVolume(props.selection);
     // A mirror is an admin's too, its frame picked first.
     const canAddMirror = isAdmin && ObjectPlacementUtil.canAddObject(props.selection, mirrorTypeIndex);
+    // Pets are only where the server plays them. One is generated by whoever has the dollars it costs, on a floor with
+    // room for it.
+    const offersPets = PetGenerationUtil.isOffered();
+    const canAddPet = offersPets && PetGenerationUtil.canGenerate(props.selection);
 
     // A chooser shows only while its type can be added to the selected face.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
@@ -126,24 +138,70 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const choosing = (chooser != null && chooser.selection == props.selection && canAdd.get(chooser.typeIndex))
         ? chooser.typeIndex : null;
     const close = () => setChooser(null);
-    const onClose = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined : close;
-    const addButton = (id: string, icon: ReactNode, objectTypeIndex: number) => <IconButton id={id} icon={icon}
-        size="md" disabled={!canAdd.get(objectTypeIndex)} highlight={choosing == objectTypeIndex}
-        onClick={() => setChooser(objectTypeIndex == choosing ? null
-            : {typeIndex: objectTypeIndex, selection: props.selection})}/>;
+    const raised = (ADD_BUTTONS_IN_SUBMENUS && raisedMenu != null && raisedMenu.selection == props.selection)
+        ? raisedMenu.menu : null;
+    // A chooser's add button leaves any column up, hidden behind the chooser, for putting the chooser away to return to.
+    const addButton = (id: string, name: string, objectTypeIndex: number, classNames = KIND_BUTTON_CLASS_NAMES) =>
+        <Button id={id} key={id} name={name} mark="add" size="sm" additionalClassNames={classNames}
+            disabled={!canAdd.get(objectTypeIndex)}
+            onClick={() => setChooser({typeIndex: objectTypeIndex, selection: props.selection})}/>;
+    // One that adds its object as it is, with nothing to pick first, and puts its kind's column away; with what it
+    // costs beside it in a column, or under it in the row, if anything.
+    const plainButton = (id: string, name: string, enabled: boolean, add: () => void, price?: number) => {
+        const button = <Button id={id} key={id} name={name} mark="add" size="sm"
+            additionalClassNames={KIND_BUTTON_CLASS_NAMES} disabled={!enabled} onClick={() => {
+                setRaisedMenu(null);
+                add();
+            }}/>;
+        if (price == undefined)
+            return button;
+        return ADD_BUTTONS_IN_SUBMENUS
+            ? <div key={id} className="flex flex-row items-center gap-1.5 shrink-0">{button}<PriceTag dollars={price}/></div>
+            : <div key={id} className="relative shrink-0">
+                {button}
+                <PriceTag dollars={price} additionalClassNames="absolute top-full left-1/2 -translate-x-1/2 mt-1"/>
+            </div>;
+    };
 
-    // The back gesture puts away a chooser beneath this row, as its add button does (see ClosablePanelUtil): not as a
-    // panel over the tools, which this row stays on screen as. One in the row's place sees to that itself (see
-    // ScrollPanel).
+    // Every add button there is for this user here, by kind, in the order each kind offers them (the first nearest its
+    // menu button). The buttons ScreenControlMap names are pictured in messages by hand-made copies (see
+    // ScreenControlPicture): new words, a new mark or color for one goes there too.
+    const addButtons: {[menu in AddMenu]: ReactNode[]} = {
+        decoration: [
+            addButton("addCanvasButton", "Canvas", canvasTypeIndex),
+            addButton("addPropButton", "Prop", propTypeIndex),
+            addButton("addLampButton", "Lamp", lampTypeIndex),
+            isSuperuser && addButton("addLabelButton", "Label", labelTypeIndex),
+            isAdmin && addButton("addMirrorButton", "Mirror", mirrorTypeIndex),
+        ],
+        machine: [
+            plainButton("addFanButton", "Fan", canAddFan, () => ObjectPlacementUtil.tryAddFan(props.selection)),
+            offersCannon && plainButton("addCannonButton", "Cannon", canAddCannon,
+                () => ObjectPlacementUtil.tryAddCannon(props.selection), CANNON_PRICE_DOLLARS),
+        ],
+        companion: [
+            isAdmin && plainButton("addNpcButton", "NPC", canAddNpc,
+                () => ObjectPlacementUtil.tryAddNpc(props.selection)),
+            offersPets && plainButton("addPetButton", "Pet", canAddPet,
+                () => PetGenerationUtil.open(props.selection), PET_PRICE_DOLLARS),
+        ],
+    };
+    const menuButton = (menu: AddMenu, name: string) => addButtons[menu].some(button => button) && <Button
+        id={ADD_MENU_BUTTON_IDS[menu]} key={menu} name={name} mark="more" size="sm"
+        additionalClassNames={TEXT_BUTTON_CLASS_NAMES} highlight={raised == menu}
+        onClick={() => setRaisedMenu(raised == menu ? null : {menu, selection: props.selection})}/>;
+
+    // The back gesture puts away a kind's column (not over the tools; see ClosablePanelUtil), after any chooser raised
+    // in front of it, whose close button is always newer on the stack (see ScrollPanel).
     useEffect(() => {
-        if (!SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null)
+        if (raised == null)
             return;
-        const token = ClosablePanelUtil.register(() => setChooser(null), false);
+        const token = ClosablePanelUtil.register(() => setRaisedMenu(null), false);
         return () => ClosablePanelUtil.unregister(token);
-    }, [choosing]);
+    }, [raised]);
 
-    // A pick closes a chooser in this row's place at once, so a second click can't add another while the first goes
-    // up. One beneath the row stays up as it is meanwhile, taking no other pick; once the object is up it is put away,
+    // A pick closes the chooser at once, so a second click can't add another while the first goes up; with sub-panels
+    // beneath the tools, it stays up as it is meanwhile, taking no other pick, and is put away once the object is up,
     // where this menu outlives it (see ObjectPlacementUtil).
     const add = async (tryAdd: () => Promise<void>) => {
         if (!SUB_PANELS_BENEATH_SELECTION_TOOLS)
@@ -163,36 +221,29 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         }
     };
 
-    // Full width, so the rows can scroll horizontally instead of growing. The buttons ScreenControlMap names are pictured
-    // in messages by hand-made copies (see ScreenControlPicture): a new icon or color for one goes there too. The row
-    // is deeper beneath its buttons where one of them has a price to show there.
+    // Full width, so the rows can scroll horizontally instead of growing. With every add button in the row, it is
+    // deeper beneath its buttons where one of them has a price to show there.
+    const rowHoldsPrices = !ADD_BUTTONS_IN_SUBMENUS && (offersCannon || offersPets);
     return <div className="flex flex-col gap-1 w-full">
-        {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow
-            additionalClassNames={offersCannon ? "pb-6" : ""}>
-            <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
+        {choosing == null && <SelectionToolRow additionalClassNames={rowHoldsPrices ? "pb-6" : ""}>
+            <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="sm" color="red" shortcutKey="Delete"
                 disabled={!VoxelEditUtil.canRemoveVoxelBlock(props.selection)}
                 onClick={() => VoxelEditUtil.tryRemoveVoxelBlock(props.selection)}/>
-            <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"
+            <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="sm"
                 disabled={!VoxelEditUtil.canAddVoxelBlock(props.selection)}
                 onClick={() => VoxelEditUtil.tryAddVoxelBlock(props.selection)}/>
-            {addButton("addCanvasButton", <AddCanvasIcon/>, canvasTypeIndex)}
-            {addButton("addPropButton", <AddPropIcon/>, propTypeIndex)}
-            {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
-            {offersCannon && <div className="relative shrink-0">
-                <IconButton id="addCannonButton" icon={<AddCannonIcon/>} size="md"
-                    disabled={!canAddCannon} onClick={() => ObjectPlacementUtil.tryAddCannon(props.selection)}/>
-                <PriceTag dollars={CANNON_PRICE_DOLLARS} additionalClassNames="absolute top-full left-1/2 -translate-x-1/2 mt-1"/>
-            </div>}
-            <IconButton id="addFanButton" icon={<AddFanIcon/>} size="md"
-                disabled={!canAddFan} onClick={() => ObjectPlacementUtil.tryAddFan(props.selection)}/>
-            {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
-            {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
-            {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"
-                disabled={!canAddNpc} onClick={() => ObjectPlacementUtil.tryAddNpc(props.selection)}/>}
-            {isAdmin && addButton("addMirrorButton", <AddMirrorIcon/>, mirrorTypeIndex)}
-            {managesVolumes && <IconButton id="addVolumeButton" icon={<AddVolumeIcon/>} size="md"
+            {ADD_BUTTONS_IN_SUBMENUS && menuButton("decoration", "Decor")}
+            {ADD_BUTTONS_IN_SUBMENUS && menuButton("machine", "Toy")}
+            {ADD_BUTTONS_IN_SUBMENUS && menuButton("companion", "Robot")}
+            {!ADD_BUTTONS_IN_SUBMENUS && [...addButtons.decoration, ...addButtons.machine, ...addButtons.companion]}
+            {isSuperuser && addButton("addDoorButton", "Door", doorTypeIndex, TEXT_BUTTON_CLASS_NAMES)}
+            {managesVolumes && <IconButton id="addVolumeButton" icon={<AddVolumeIcon/>} size="sm"
                 disabled={!canAddVolume} onClick={() => ObjectPlacementUtil.tryAddVolume(props.selection)}/>}
         </SelectionToolRow>}
+        {raised != null && choosing == null && <SelectionSubmenu
+            anchorId={ADD_MENU_BUTTON_IDS[raised]} id={`${raised}Submenu`}>
+            {addButtons[raised]}
+        </SelectionSubmenu>}
         {choosing == canvasTypeIndex && <ImageMapThumbnailPanel
             id="canvasImageOptions"
             searchInputId="canvasImageSearchInput"
@@ -200,7 +251,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             mapName="PictureImageMap"
             subfolder={CANVAS_IMAGE_SUBFOLDER}
             onChoose={path => add(() => ObjectPlacementUtil.tryAddCanvas(props.selection, path))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == propTypeIndex && <ImageMapThumbnailPanel
             id="propImageOptions"
@@ -210,32 +261,32 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             subfolder={PROP_IMAGE_SUBFOLDER}
             canChoose={propImageFits}
             onChoose={path => add(() => ObjectPlacementUtil.tryAddProp(props.selection, path))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == lampTypeIndex && <CompositionThumbnailPanel
             id="lampSizeOptions"
             objectType={LampObjectTypeConfig.objectType}
             canChoose={lampSizeFits}
             onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddLamp(props.selection, compositionIndex))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == labelTypeIndex && <CompositionThumbnailPanel
             id="customizeLabelOptions"
             objectType={LabelObjectTypeConfig.objectType}
             onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddLabel(props.selection, compositionIndex))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == doorTypeIndex && <CompositionThumbnailPanel
             id="customizeDoorOptions"
             objectType={DoorObjectTypeConfig.objectType}
             onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddDoor(props.selection, compositionIndex))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == mirrorTypeIndex && <CompositionThumbnailPanel
             id="customizeMirrorOptions"
             objectType={MirrorObjectTypeConfig.objectType}
             onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddMirror(props.selection, compositionIndex))}
-            onClose={onClose}
+            onClose={close}
         />}
         {choosing == null && props.children}
     </div>;

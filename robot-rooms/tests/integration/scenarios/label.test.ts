@@ -363,7 +363,8 @@ describe("a room full of the longest text", () => {
             [ObjectMetadataKeyEnumMap.ImagePath]: longestImagePath,
             [ObjectMetadataKeyEnumMap.Label]: longest(OBJECT_LABEL_MAX_LENGTH),
             [ObjectMetadataKeyEnumMap.LabelColor]: `${ColorUtil.getPaletteSize(LABEL_COLOR_PALETTE_NAME) - 1}`,
-            [ObjectMetadataKeyEnumMap.LabelFont]: LabelTextUtil.encodeFont(false, LabelTextUtil.maxFontSize),
+            [ObjectMetadataKeyEnumMap.LabelFont]: LabelTextUtil.encodeFont(false,
+                LabelTextUtil.fontSizes[LabelTextUtil.fontSizes.length - 1]),
             // Room ids are ASCII document ids.
             [ObjectMetadataKeyEnumMap.DestinationRoomId]: "r".repeat(DOCUMENT_ID_MAX_LENGTH),
             [ObjectMetadataKeyEnumMap.DestinationDoorLabel]: longest(OBJECT_LABEL_MAX_LENGTH),

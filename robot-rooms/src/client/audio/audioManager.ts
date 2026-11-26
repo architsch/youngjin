@@ -5,12 +5,14 @@ import ClientVoxelQueryUtil from "../voxel/util/clientVoxelQueryUtil";
 import AudioBundleMap from "./maps/audioBundleMap";
 import AudioBundleInfo from "./types/audioBundleInfo";
 import AudioClipName from "./types/audioClipName";
+import AudioPhrasePart from "./types/audioPhrasePart";
 import AudioPlayOptions from "./types/audioPlayOptions";
 import SpatialAudioPlayOptions from "./types/spatialAudioPlayOptions";
 import AudioVoice from "./types/audioVoice";
 import SpatialAudioVoice from "./types/spatialAudioVoice";
 import DecodedAudioBundle from "./types/decodedAudioBundle";
 import BundledClipPlayer from "./types/bundledClipPlayer";
+import BundledPhrasePlayer from "./types/bundledPhrasePlayer";
 import StreamedClipPlayer from "./types/streamedClipPlayer";
 import AudioBundleUtil from "./util/audioBundleUtil";
 import AudioContextUtil from "./util/audioContextUtil";
@@ -48,7 +50,7 @@ const AudioManager =
             return;
         loadStarted = true;
         assetsURL = url;
-        const bytes = hasClips ? AudioBundleUtil.download(`${url}/${map.path}?v=${map.version}`) : undefined;
+        const bytes = hasClips ? AudioBundleUtil.download(`${url}/${map.path}`) : undefined;
         // A failure is reported where the bytes are awaited, which may be long after.
         bytes?.catch(() => {});
         AudioContextUtil.install(context => {
@@ -111,6 +113,13 @@ const AudioManager =
         return launch(new SpatialAudioVoice(toList(clips), true, options?.volume ?? 1, options?.rate ?? 1, position,
             options?.range ?? SPATIAL_AUDIO_DEFAULT_RANGE));
     },
+    // Clips of the bundle as one sound at a position in the world, each once, at its own time, rate and loudness (see
+    // AudioPhrasePart), which its owner may move while it plays.
+    playPhraseAt: (parts: readonly AudioPhrasePart[], position: Vec3, options?: SpatialAudioPlayOptions): SpatialAudioVoice =>
+    {
+        return launch(new SpatialAudioVoice(parts.map(part => part.clip), false, options?.volume ?? 1, options?.rate ?? 1,
+            position, options?.range ?? SPATIAL_AUDIO_DEFAULT_RANGE, parts));
+    },
 }
 
 function toList(clips: AudioClipName | readonly AudioClipName[]): readonly string[]
@@ -122,7 +131,7 @@ function toList(clips: AudioClipName | readonly AudioClipName[]): readonly strin
 // whatever else had been saved up. A loop waits.
 function launch<Voice extends AudioVoice>(voice: Voice): Voice
 {
-    const problem = getProblem(voice.clips);
+    const problem = getProblem(voice.clips, voice.parts != undefined);
     if (problem != undefined && !problemsTold.has(problem))
     {
         problemsTold.add(problem);
@@ -143,16 +152,19 @@ function launch<Voice extends AudioVoice>(voice: Voice): Voice
     return voice;
 }
 
-// Why the clips can't play as one voice, or undefined if they can.
-function getProblem(clips: readonly string[]): string | undefined
+// Why the clips can't play as one voice, or as one phrase, or undefined if they can.
+function getProblem(clips: readonly string[], phrase: boolean): string | undefined
 {
     if (clips.length == 0)
         return "No clip to play";
     const unknown = clips.find(clip => !hasOwn(map.clips, clip) && !hasOwn(map.streams, clip));
     if (unknown != undefined)
         return `Unknown clip (clip = ${unknown})`;
-    if (clips.some(clip => hasOwn(map.streams, clip)) && clips.some(clip => hasOwn(map.clips, clip)))
+    const streamed = clips.some(clip => hasOwn(map.streams, clip));
+    if (streamed && clips.some(clip => hasOwn(map.clips, clip)))
         return `Clips from the bundle and streams in one voice (clips = ${clips.join(", ")})`;
+    if (streamed && phrase)
+        return `Streams in a phrase, which plays clips of the bundle alone (clips = ${clips.join(", ")})`;
     return undefined;
 }
 
@@ -172,6 +184,8 @@ function startVoice(voice: AudioVoice): void
     voice.start(context, context.destination, (output, onFinished, onReleased) => isStreamed(voice)
         ? new StreamedClipPlayer(context, output, getStreamURL, voice.clips, voice.looping, voice.rate, onFinished,
             onReleased)
+        : (voice.parts != undefined)
+        ? new BundledPhrasePlayer(context, output, bundle!, voice.parts, voice.rate, onFinished, onReleased)
         : new BundledClipPlayer(context, output, bundle!, voice.clips, voice.looping, voice.rate, onFinished,
             onReleased));
     if (voice instanceof SpatialAudioVoice)

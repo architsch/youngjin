@@ -21,6 +21,7 @@ import HelperAgentUtil from "./agent/util/helperAgentUtil";
 import DollarBillUtil from "./inventory/util/dollarBillUtil";
 import CannonUtil from "./object/util/cannonUtil";
 import CannonBallUtil from "./object/util/cannonBallUtil";
+import PetPlayUtil from "./object/util/petPlayUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
 
@@ -150,10 +151,12 @@ ${LatencySimUtil.getConfigSummary()}
         await HelperAgentUtil.stop();
         console.log("Saving all multiplayer rooms and user gameplay states before shutdown...");
 
-        // Their bills, cannons and cannon balls with them, kept still since shutdown began.
+        // Their bills, cannons, cannon balls and pets with them, kept still since shutdown began; and how the pets the
+        // server plays for agents are, which the save of the users below takes.
         DollarBillUtil.markRoomsToSave();
         CannonUtil.markRoomsToSave();
         CannonBallUtil.markRoomsToSave();
+        PetPlayUtil.keepAll();
         await ServerRoomManager.saveMultiplayerRooms(true);
         console.log("All rooms saved.");
 

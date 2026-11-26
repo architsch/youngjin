@@ -277,7 +277,20 @@ describe("what goes over the wire", () => {
             for (const axis of ["x", "y", "z"] as const)
                 expect(waypoint.pos[axis]).toBeCloseTo(waypoints[i].pos[axis], 2);
             expect(Math.abs(waypoint.speed - waypoints[i].speed)).toBeLessThan(1 / 16);
+            // Nothing carries a thing along a path that doesn't say so.
+            expect(waypoint.carried).toBeUndefined();
         });
+    });
+
+    it("says which of a path's places a thing is carried to, which come first", () => {
+        const place = (x: number, carried?: boolean) => ({pos: {x, y: 1, z: 1}, speed: 2, ...(carried ? {carried} : {})});
+        const carriedOf = (waypoints: {carried?: boolean}[]) => (SetObjectPathSignal.decode(roundTrip(
+            new SetObjectPathSignal("a-room", "@7", waypoints.map((waypoint, i) => place(i, waypoint.carried))))) as SetObjectPathSignal)
+            .waypoints.map(waypoint => waypoint.carried);
+        expect(carriedOf([{carried: true}, {carried: true}, {}, {}])).toEqual([true, true, undefined, undefined]);
+        expect(carriedOf([{carried: true}])).toEqual([true]);
+        expect(carriedOf([{}, {}])).toEqual([undefined, undefined]);
+        expect(carriedOf([])).toEqual([]);
     });
 
     it("says who collected what", () => {

@@ -12,9 +12,9 @@ What a player or NPC says is its `SentMessage`, shown in a speech bubble over it
 
 ## What a speaker is busy with
 - One key, `Activity`, holds one `SpeakerActivity` at a time, for players and helpers alike. A new state is a new value of it, never a new key.
-- **Typing**: dots by the name, last words still up. A person's chat field in use (`ChatTypingUtil`), an agent's `typing` tool, or a helper thinking of an answer.
-- **Editing**, **Reading**: "Editing..." (see [game_mode.md](game_mode.md)) or "Offline..." in place of the message, which shows again afterwards. Reading is a page of the website over the game, or the page hidden, as behind another tab; a page in sight but unfocused never counts.
-- A browser works out its user's one state, reading first, then editing, then typing (`PlayerActivityUtil`), and sends it as the signal for that key. Nothing else tells the server a person is typing.
+- **Typing**: dots by the name, last words still up. A person's chat field in use (`ChatTypingUtil`), an agent's `typing` tool, or a helper or a pet thinking of an answer (a pet's is shown to the room by the server, never kept).
+- **Editing**, **Reading**, **Away**: "Editing..." (see [game_mode.md](game_mode.md)), "Reading..." or "Offline..." in place of the message, which shows again afterwards. Reading is a page of the website over the game; Away is the page hidden, as behind another tab; a page in sight but unfocused never counts.
+- A browser works out its user's one state, away first, then reading, editing and typing (`PlayerActivityUtil`), and sends it as the signal for that key. Nothing else tells the server a person is typing.
 - The server never saves it with the player: each browser tells it again on arrival, and an agent's typing ends with the room.
 
 ## Links
@@ -24,14 +24,18 @@ What a player or NPC says is its `SentMessage`, shown in a speech bubble over it
 - The chat input turns an address into a chip once a space follows it, or as it is pasted. A chip is the link, and Backspace takes it whole.
 - Clicking a link (`MessageLinkOpenUtil`):
   - a room of this game goes there, after asking;
-  - a page of ThingsPool's website shows over the game, in a frame that may open tabs but never navigate the game away (`WebPageForm`);
+  - a page of ThingsPool's website shows over the game, in a frame that may open tabs but never navigate the game away (`WebPageForm`); the frame is named, and the site's pages, knowing it by that name, tell the game of a click on a link back into it, which closes the frame, or off the site, which asks over the page before opening a new tab (`WebPageFrameUtil`, the footer in the repository's `ssg/` views): the game can't see into a frame of another origin;
   - anything else opens in a new tab, after a prompt showing the whole address, since a label is whatever its sender wrote.
 - The game won't start inside a frame of its own origin (a page in that frame linking back to the game), so a tab never runs it twice as one user.
-- Agents speak by a tool, told the markup, and hear what is said as events. Helpers hear what is said near them, or to them by name, or still shows over someone who comes near, stand still facing whoever types them a line, answer it with addresses only as links, and show typing dots by their name while they think of an answer (see [agents.md](../networking/agents.md#helpers)).
+- Agents speak by a tool, told the markup, and hear what is said as events. Helpers hear what is said near them, or to them by name, or still shows over someone who comes near, stand still facing whoever types them a line, answer it with addresses only as links, and show typing dots by their name while they think of an answer (see [agents.md](../networking/agents.md#helpers)). A [pet](pet.md#talking-with-people) a line is for answers it instead, in plain text.
 
 ## Pictures of controls
 - A message shows a small copy of a control on the screen where it carries `<control name="..."/>` (`ScreenControlMap`), so a helper shows the button it means rather than say where on the screen it is. A name no control has is shown as that name, in text.
 - Stored as written there, and counted toward a message's length as the control's words, kept whole or not at all.
-- Drawn as the control is, from its icon and face (`ScreenControlPicture`), sized by the text around it and taking no presses. A bubble isn't React's, so each picture is drawn by React once and copied (`ScreenControlPictureUtil`).
+- Drawn as the control is, from its icon or words and its face (`ScreenControlPicture`), sized by the text around it and taking no presses. A bubble isn't React's, so each picture is drawn by React once and copied (`ScreenControlPictureUtil`).
 - **Trap**: a picture is a copy made by hand, so a redesigned control keeps its old picture. Whenever a pictured control's look changes, change its picture to match in the same change.
 - Agents, with no screen, hear a picture as the control's words in square brackets.
+- A [pet](pet.md)'s words for what it needs picture the control that gives it.
+
+## Notices
+- A bubble can show words and a button of the browser's own for a while, in the place of whatever its speaker says meanwhile (`SpeechBubble`): nobody else sees them. A guest's new pet asks them to sign in this way.

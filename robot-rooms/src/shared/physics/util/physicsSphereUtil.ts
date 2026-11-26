@@ -28,11 +28,12 @@ const PhysicsSphereUtil =
     {
         return colliderState.hitbox.halfSize.x;
     },
-    // Whether physics moves an object as a body (its type's Rigidbody component), and it is no ghost, which nothing
-    // touches (see AdminPrefsUtil.isGhost).
+    // Whether physics moves an object as a body (its type's Rigidbody component, or the server's doing the same; see
+    // ObjectTypeConfig.movedAsBody), and it is no ghost, which nothing touches (see AdminPrefsUtil.isGhost).
     isBody: (physicsRoom: PhysicsRoom, object: PhysicsObject): boolean =>
     {
-        return ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).components.spawnedByMe?.rigidbody != undefined
+        const config = ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex);
+        return (config.components.spawnedByMe?.rigidbody != undefined || config.movedAsBody == true)
             && !AdminPrefsUtil.isGhost(physicsRoom.room.objectById[object.objectId]);
     },
     // Whether a sphere that strikes an object bounces off it (see ColliderConfig.bouncesSpheres).

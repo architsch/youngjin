@@ -12,6 +12,7 @@
         "allowSyntheticDefaultImports" : true,
         "esModuleInterop" : true,
         "resolveJsonModule": true,
+        "skipLibCheck": true,
         "lib": [
           "ES2021.String"
         ]

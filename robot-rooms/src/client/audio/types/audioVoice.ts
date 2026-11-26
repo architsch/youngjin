@@ -1,20 +1,23 @@
 import AudioClipPlayer from "./audioClipPlayer";
+import AudioPhrasePart from "./audioPhrasePart";
 
 // How long a sound cut short fades out over, so that stopping it never clicks.
 export const AUDIO_STOP_FADE_SECONDS = 0.05;
 // How quickly a sound follows a change of its volume.
 export const AUDIO_VOLUME_SMOOTHING_SECONDS = 0.02;
 
-// A sound AudioManager plays: a clip once, a clip over and over, or several clips one after another in an endless
-// shuffled order. Its owner keeps it to change or stop it. Until AudioManager starts it, it only remembers what it is
-// told.
+// A sound AudioManager plays: a clip once, a clip over and over, several clips one after another in an endless
+// shuffled order, or a phrase of clips. Its owner keeps it to change or stop it. Until AudioManager starts it, it only
+// remembers what it is told.
 export default class AudioVoice
 {
     readonly clips: readonly string[];
-    // Plays until stopped; otherwise it plays its one clip once.
+    // Plays until stopped; otherwise it plays its one clip, or its phrase, once.
     readonly looping: boolean;
     // How fast it plays, which raises its pitch as much.
     readonly rate: number;
+    // Its clips as a phrase, each played once at its own time (see AudioPhrasePart), or undefined.
+    readonly parts: readonly AudioPhrasePart[] | undefined;
     protected context: BaseAudioContext | undefined;
     private volume: number;
     private output: GainNode | undefined;
@@ -22,12 +25,14 @@ export default class AudioVoice
     private stopped = false;
     private finished = false;
 
-    constructor(clips: readonly string[], looping: boolean, volume: number, rate: number = 1)
+    constructor(clips: readonly string[], looping: boolean, volume: number, rate: number = 1,
+        parts?: readonly AudioPhrasePart[])
     {
         this.clips = clips;
         this.looping = looping;
         this.volume = volume;
         this.rate = rate;
+        this.parts = parts;
     }
 
     // Once its one clip has played, or once it is stopped.

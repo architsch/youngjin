@@ -34,21 +34,24 @@ const ServerInventoryManager =
     {
         ctx.addPendingSignalToUser("inventorySignal", new InventorySignal({...ctx.inventory}));
     },
-    addItem: (ctx: UserContext, itemType: InventoryItemType, quantity: number): void =>
+    // writesRow: false where the row is written by whoever calls, along with something else, as one write (a pet bought
+    // or sold, see PetServerUtil).
+    addItem: (ctx: UserContext, itemType: InventoryItemType, quantity: number, writesRow: boolean = true): void =>
     {
         ctx.inventory[itemType] = (ctx.inventory[itemType] ?? 0) + quantity;
         ServerInventoryManager.tellUser(ctx);
-        void DBInventoryUtil.addItem(ctx.user.id, itemType, quantity);
+        if (writesRow)
+            void DBInventoryUtil.addItem(ctx.user.id, itemType, quantity);
     },
     // Takes dollars from the user for something that isn't theirs to hold (a cannon set in a room), if they have them:
     // whether it did. What is kept here decides, at once, so that what is paid for is made in the same breath, with
     // nothing arriving in between; the row follows, as it does a gain.
-    spendDollars: (ctx: UserContext, dollars: number): boolean =>
+    spendDollars: (ctx: UserContext, dollars: number, writesRow: boolean = true): boolean =>
     {
         const dollar = InventoryItemTypeEnumMap.Dollar;
         if (!((ctx.inventory[dollar] ?? 0) >= dollars))
             return false;
-        ServerInventoryManager.addItem(ctx, dollar, -dollars);
+        ServerInventoryManager.addItem(ctx, dollar, -dollars, writesRow);
         return true;
     },
     // Spends the user's dollars on an item for sale that they don't hold yet, and answers. The row decides, in one

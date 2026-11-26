@@ -8,7 +8,7 @@
  * override resolution, an emitter's reach and its particles' pace among it. What the shader draws is checked headlessly instead (see
  * docs/testing/integration/scenarios.md).
  */
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, Mock, MockInstance } from "vitest";
 import fc from "fast-check";
 
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
@@ -652,7 +652,7 @@ describe("voxel block events", () => {
 describe("object and cannon events", () => {
     const AT = {x: 6, y: 1.5, z: 9};
     const WALL_FACING = {x: 0, y: 0, z: 1};
-    let play: ReturnType<typeof vi.spyOn>;
+    let play: MockInstance<typeof ParticleSystem.play>;
 
     function makeObject(objectType: string, scale = {x: 1, y: 1, z: 1}, metadata: {[key: number]: string} = {},
         facing = WALL_FACING): AddObjectSignal
@@ -763,6 +763,8 @@ describe("AnimatedSprite", () => {
         vi.restoreAllMocks();
     });
 
+    // It holds the very metadata given, as plain strings (as these types' getOverride read it), so a change made to
+    // that is the object's own.
     function makeObject(metadata: {[key: number]: string}): GameObject
     {
         const params = new AddObjectSignal("room", "user", "User", canvasTypeIndex, "sprite-object",
@@ -808,13 +810,14 @@ describe("AnimatedSprite", () => {
             handles.push(fakeHandle(sprite));
             return handles[handles.length - 1] as unknown as SpriteHandle;
         });
-        const object = makeObject({});
+        const metadata: {[key: number]: string} = {};
+        const object = makeObject(metadata);
         const component = new AnimatedSprite(object, {
             baseline: {sprite: "fanBlades"},
             getOverride: (metadata: {[key: number]: string}) => (metadata[7] === "lit") ? {sprite: "glow"} : undefined,
         });
         await component.onSpawn();
-        object.params.metadata[7] = "lit";
+        metadata[7] = "lit";
         component.onSetMetadata();
         expect(handles.map(h => h.sprite)).toEqual(["fanBlades", "glow"]);
         expect(handles[0].release).toHaveBeenCalledOnce();
@@ -830,7 +833,8 @@ describe("AnimatedSprite", () => {
             three: [{x: 0, y: 0.25}, {x: -0.25, y: -0.2}, {x: 0.3, y: -0.2}],
             one: [{x: 0.1, y: 0}],
         };
-        const object = makeObject({7: "three"});
+        const metadata: {[key: number]: string} = {7: "three"};
+        const object = makeObject(metadata);
         const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, object.params.transform.scale);
         const component = new AnimatedSprite(object, {
             baseline: {sprite: "fanBlades", faceOffset: 0.1, widthScale: 0.4, heightScale: 0.3},
@@ -856,7 +860,7 @@ describe("AnimatedSprite", () => {
         });
 
         // Fewer: the first kept and moved, the rest let go.
-        object.params.metadata[7] = "one";
+        metadata[7] = "one";
         component.onSetMetadata();
         expect(handles).toHaveLength(3);
         expect(handles[0].release).not.toHaveBeenCalled();
@@ -865,14 +869,14 @@ describe("AnimatedSprite", () => {
         expect(poseOf(handles[0]).position.x).toBeCloseTo(5 + 0.1 * size.x, 6);
 
         // None given: the one, in the middle.
-        object.params.metadata[7] = "none";
+        metadata[7] = "none";
         component.onSetMetadata();
         expect(handles).toHaveLength(3);
         expect(poseOf(handles[0]).position.x).toBeCloseTo(5, 6);
         expect(poseOf(handles[0]).position.y).toBeCloseTo(1, 6);
 
         // More again: as many more rented, and every one let go in the end.
-        object.params.metadata[7] = "three";
+        metadata[7] = "three";
         component.onSetMetadata();
         expect(handles).toHaveLength(5);
         await component.onDespawn();

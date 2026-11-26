@@ -10,6 +10,7 @@ Almost nothing is textured. Surfaces such as the moulded timber of doors and can
 - Surfaces **extend stock three.js materials** rather than replacing them, so lighting, fog, tone mapping and color conversion stay consistent. This matters where effects must match, such as wall fog and sky fog. All splices are inlined into one `main()`, so earlier declarations stay in scope for later splices.
 - three.js's program cache cannot see splices, so **every cached material gets its own cache key** (its material factory id). Without that, different surfaces would share one shader.
 - Particles have one material per render state, which computes each instance in the vertex stage (see [particles.md](particles.md)).
+- Two materials draw from numbers each instance carries. The tin takes an age, which shifts how much of it has rusted, from cleaner than the default to rusted through. The emissive draws a glyph in its own fragment shader (a face of eyes and a mouth that blinks, droops or flickers, or a battery's lit cells) and can dim with the camera's distance, so a lit square needs no texture; with no glyph it is a plain glow.
 
 ## Shared noise
 Wood grain, tin corrosion, clouds, ground and smoke all read **one value-noise field**, baked once at load into a repeating 3D texture by `ValueNoiseTextureUtil`. Its channels hold independent fields, so one fetch can return a vector. This is much cheaper than computing noise per fragment on mobile. Octaves use non-commensurate ratios, so the tiling does not show.

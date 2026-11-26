@@ -8,6 +8,9 @@ import TextureUtil from "../../util/textureUtil";
 import MeshDataUtil from "../../../../shared/graphics/mesh/util/meshDataUtil";
 import InstancedPartUtil from "../../util/instancedPartUtil";
 import { getSampledUV, getUVScales } from "../../shaders/instancedTexturePackShader";
+import { TIN_RUST_ATTRIBUTE } from "../../shaders/instancedTinShader";
+import { EMISSIVE_GLYPH_ATTRIBUTE, EMISSIVE_GLYPH_SHAPE_ATTRIBUTE } from "../../shaders/instancedEmissiveShader";
+import EmissiveGlyph from "../../../../shared/graphics/mesh/composition/types/emissiveGlyph";
 
 const matrixTemp = new THREE.Matrix4();
 const sphereTemp = new THREE.Sphere();
@@ -347,6 +350,32 @@ export default class InstancedMeshBinding
             r, g, b, thickness, convex);
         markInstanceForUpload(mouldingColorAttrib, instanceId);
         markInstanceForUpload(mouldingParamsAttrib, instanceId);
+    }
+
+    // "InstancedTin" age (see instancedTinShader). Every tin instance is given one, or one handed back to the pool
+    // would keep its last owner's; unchanged values are skipped, since this is written whenever an object moves.
+    updateInstanceRust(instanceId: number, rust: number)
+    {
+        if (!this.instancedMesh)
+            return;
+        const rustAttrib = this.getOrCreateInstancedAttribute(TIN_RUST_ATTRIBUTE, 1);
+        if (InstancedPartUtil.setInstanceRust(rustAttrib, instanceId, rust))
+            markInstanceForUpload(rustAttrib, instanceId);
+    }
+
+    // What an "InstancedEmissive" instance draws, and whether it dims with distance (see instancedEmissiveShader).
+    // Given to every such instance, and skipped where unchanged, as its age is to a tin one.
+    updateInstanceGlyph(instanceId: number, glyph: EmissiveGlyph | undefined, dims: boolean)
+    {
+        if (!this.instancedMesh)
+            return;
+        const glyphAttrib = this.getOrCreateInstancedAttribute(EMISSIVE_GLYPH_ATTRIBUTE, 4);
+        const shapeAttrib = this.getOrCreateInstancedAttribute(EMISSIVE_GLYPH_SHAPE_ATTRIBUTE, 4);
+        if (InstancedPartUtil.setInstanceGlyph(glyphAttrib, shapeAttrib, instanceId, glyph, dims))
+        {
+            markInstanceForUpload(glyphAttrib, instanceId);
+            markInstanceForUpload(shapeAttrib, instanceId);
+        }
     }
 
     // Outline strength (0..1); ignored by materials without an outline color. Unchanged values are

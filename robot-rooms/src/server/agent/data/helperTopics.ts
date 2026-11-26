@@ -5,7 +5,7 @@ import { NpcPersonality } from "../../../shared/object/types/npcPersonality";
 // many different things, each in its own field. Each is a plain, true statement about something named: from the wide
 // world (only facts that are well known and certain), or from one of the game's maker's writings, with the link a
 // helper gives it, a word or two its button's words (every address a page the site has; a test checks them). Only the
-// few picked are ever sent, so the lists cost nothing to grow. Kept by the helper-instructions skill.
+// few picked are ever sent, so the lists cost nothing to grow. Kept by the gameplay-ai skill.
 export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: string[]} = {
     guide: [
         "The Rosetta Stone, found in Egypt in 1799, has the same text in three scripts. It helped Jean-François "

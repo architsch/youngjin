@@ -4,7 +4,8 @@
  * mono clip heard alike from both sides, other rates resampled with their length and pitch kept and a loop's seam kept
  * whole, nothing above the bundle's highest frequency folded back, every common kind of WAV file read, an MP3 file streamed
  * from where it is under a version of its own, what it can't use refused by name, encoding only when the bundle's samples
- * change and writing the map only when it does, no bundle without clips, the committed map being what it makes of the
+ * change, each version into a file of its own with earlier ones left where they are, and writing the map only when it
+ * does, no bundle without clips, the committed map being what it makes of the
  * committed sounds, and every recording the manifest lists credited beside it); the game's own sounds as made (the same every time, at their peaks and lengths, ending in silence or
  * looping seamlessly, each seeded by its name, and every one short enough, named once and, if a loop, going round whole);
  * how the click shows where a decoder put the clips; a sequence's shuffled order; how loud, how muffled and from which
@@ -39,8 +40,8 @@ vi.mock("../../../src/client/voxel/util/clientVoxelQueryUtil", () => ({default: 
     },
 }}));
 
-import AudioBundleBuilder, { AUDIO_BUNDLE_FILE_NAME, AUDIO_BUNDLE_SAMPLE_RATE, AUDIO_CLIP_PADDING_SECONDS,
-    AUDIO_MARKER_TIME, AUDIO_MAX_BUNDLED_SECONDS } from "../../../src/server/ssg/builder/audioBundleBuilder";
+import AudioBundleBuilder, { AUDIO_BUNDLE_SAMPLE_RATE, AUDIO_CLIP_PADDING_SECONDS, AUDIO_MARKER_TIME,
+    AUDIO_MAX_BUNDLED_SECONDS } from "../../../src/server/ssg/builder/audioBundleBuilder";
 import WavFileUtil from "../../../src/server/ssg/util/wavFileUtil";
 import AudioResampleUtil from "../../../src/server/ssg/util/audioResampleUtil";
 import ProceduralSoundUtil from "../../../src/server/ssg/util/proceduralSoundUtil";
@@ -53,6 +54,8 @@ import AudioVoice, { AUDIO_STOP_FADE_SECONDS, AUDIO_VOLUME_SMOOTHING_SECONDS }
     from "../../../src/client/audio/types/audioVoice";
 import SpatialAudioVoice from "../../../src/client/audio/types/spatialAudioVoice";
 import BundledClipPlayer from "../../../src/client/audio/types/bundledClipPlayer";
+import BundledPhrasePlayer from "../../../src/client/audio/types/bundledPhrasePlayer";
+import AudioPhrasePart from "../../../src/client/audio/types/audioPhrasePart";
 import SpatialAudioUtil, { SPATIAL_AUDIO_DEFAULT_RANGE, SPATIAL_AUDIO_MAX_OCCLUDING_WALLS, SPATIAL_AUDIO_MAX_PAN,
     SPATIAL_AUDIO_MIN_DISTANCE, SPATIAL_AUDIO_OPEN_CUTOFF_HZ, SPATIAL_AUDIO_WALL_CUTOFF_HZ, SPATIAL_AUDIO_WALL_GAIN }
     from "../../../src/client/audio/util/spatialAudioUtil";
@@ -70,7 +73,7 @@ const SAMPLE_TOLERANCE = 3 / 32768;
 
 // A map as the builder might write one; the manager's suites play from it.
 const TEST_MAP: AudioBundleInfo = {
-    path: "audio/bundle.mp3",
+    path: "audio/bundle-0123456789abcdef.mp3",
     version: "0123456789abcdef",
     markerTime: AUDIO_MARKER_TIME,
     clips: {
@@ -156,11 +159,11 @@ describe("the audio bundle builder", () => {
             fs.writeFileSync(filePath, wrapPcm16(pcm, numChannels, sampleRate));
         });
         const mapPath = path.join(root, "audioBundleMap.ts");
-        const bundlePath = path.join(root, AUDIO_BUNDLE_FILE_NAME);
+        const bundlePathOf = (version: string) => path.join(root, AudioBundleBuilder.getBundleFileName(version));
         return {
             builder: new AudioBundleBuilder({rootPath: root, mapFilePath: mapPath, encode, proceduralSounds}),
-            encode, mapPath, bundlePath,
-            readBundle: () => WavFileUtil.decode(fs.readFileSync(bundlePath)),
+            encode, mapPath, bundlePathOf,
+            readBundle: (version: string) => WavFileUtil.decode(fs.readFileSync(bundlePathOf(version))),
         };
     }
 
@@ -183,7 +186,7 @@ describe("the audio bundle builder", () => {
         const {builder, readBundle} = makeBuilder(root);
         const plan = await builder.plan();
         await builder.build();
-        const bundle = readBundle();
+        const bundle = readBundle(plan.version);
 
         // One stereo clip makes the whole bundle stereo.
         expect(bundle.sampleRate).toBe(RATE);
@@ -240,7 +243,7 @@ describe("the audio bundle builder", () => {
         await builder.build();
 
         expect(plan.clips.map(([name]) => name)).toEqual(["test/knock", "test/whir", "ui/blip"]);
-        const channel = readBundle().channels[0];
+        const channel = readBundle(plan.version).channels[0];
         [knock, whir].forEach((spec, i) => {
             const made = ProceduralSoundUtil.render(spec, RATE);
             const start = Math.round(plan.clips[i][1].start * RATE);
@@ -270,7 +273,7 @@ describe("the audio bundle builder", () => {
         const {builder, readBundle} = makeBuilder(root);
         const plan = await builder.plan();
         await builder.build();
-        const samples = readBundle().channels[0];
+        const samples = readBundle(plan.version).channels[0];
 
         const [[, tone], [, loop]] = plan.clips;
         expect(Math.abs(tone.duration - 0.5)).toBeLessThanOrEqual(1 / RATE);
@@ -349,9 +352,7 @@ describe("the audio bundle builder", () => {
         // Streams alone need no bundle.
         const streamsOnly = makeRoot([{name: "music/calm", file: "music/calm.mp3", data: mp3}]);
         const alone = makeBuilder(streamsOnly);
-        fs.writeFileSync(alone.bundlePath, "left from before");
         await alone.builder.build();
-        expect(fs.existsSync(alone.bundlePath)).toBe(false);
         expect(alone.encode).not.toHaveBeenCalled();
         expect(fs.readFileSync(alone.mapPath, "utf8")).toContain(`path: "",`);
     });
@@ -407,9 +408,12 @@ describe("the audio bundle builder", () => {
     it("encodes, and writes the map, only when what the bundle is made of changes", async () => {
         const clip = {name: "a", data: writeWav([sine(0.1, RATE, 440, 0.5)], RATE)};
         const root = makeRoot([clip]);
-        const {builder, encode, mapPath, bundlePath} = makeBuilder(root);
+        const {builder, encode, mapPath, bundlePathOf} = makeBuilder(root);
         await builder.build();
         const version = (await builder.plan()).version;
+        expect(fs.readFileSync(mapPath, "utf8"))
+            .toContain(`path: "audio/${AudioBundleBuilder.getBundleFileName(version)}",`);
+        expect(fs.existsSync(bundlePathOf(version))).toBe(true);
         const mapTime = fs.statSync(mapPath).mtimeMs;
 
         await builder.build();
@@ -429,26 +433,31 @@ describe("the audio bundle builder", () => {
         const louderVersion = (await builder.plan()).version;
         expect(louderVersion).not.toBe(version);
         expect(fs.readFileSync(mapPath, "utf8")).toContain(`version: "${louderVersion}"`);
+        // Beside the earlier one, which a build still deployed may play.
+        expect(fs.existsSync(bundlePathOf(louderVersion))).toBe(true);
+        expect(fs.existsSync(bundlePathOf(version))).toBe(true);
 
         // It becomes a loop, whose paddings hold its own sound.
         writeSources(root, [{...louder, loop: true}], "test");
         await builder.build();
         expect(encode).toHaveBeenCalledTimes(3);
-        expect((await builder.plan()).version).not.toBe(louderVersion);
+        const loopVersion = (await builder.plan()).version;
+        expect(loopVersion).not.toBe(louderVersion);
 
         // Its bundle is gone.
-        fs.rmSync(bundlePath);
+        fs.rmSync(bundlePathOf(loopVersion));
         await builder.build();
         expect(encode).toHaveBeenCalledTimes(4);
-        expect(fs.existsSync(bundlePath)).toBe(true);
+        expect(fs.existsSync(bundlePathOf(loopVersion))).toBe(true);
     });
 
-    it("makes no bundle while there are no clips, and maps none", async () => {
+    it("makes no bundle while there are no clips, maps none, and leaves an earlier one where it is", async () => {
         const root = makeRoot([]);
-        const {builder, encode, mapPath, bundlePath} = makeBuilder(root);
-        fs.writeFileSync(bundlePath, "left from before");
+        const {builder, encode, mapPath, bundlePathOf} = makeBuilder(root);
+        const earlier = bundlePathOf("0123456789abcdef");
+        fs.writeFileSync(earlier, "left from before");
         await builder.build();
-        expect(fs.existsSync(bundlePath)).toBe(false);
+        expect(fs.readFileSync(earlier, "utf8")).toBe("left from before");
         expect(encode).not.toHaveBeenCalled();
         const mapText = fs.readFileSync(mapPath, "utf8");
         expect(mapText).toContain(`path: "",`);
@@ -461,8 +470,8 @@ describe("the audio bundle builder", () => {
         const plan = await new AudioBundleBuilder().plan();
         expect(fs.readFileSync(path.join(process.cwd(), "src/client/audio/maps/audioBundleMap.ts"), "utf8"))
             .toBe(plan.mapText);
-        expect(fs.existsSync(path.join(process.cwd(), "../public/app/assets/audio", AUDIO_BUNDLE_FILE_NAME)))
-            .toBe(plan.pcm != undefined);
+        expect(plan.pcm == undefined || fs.existsSync(path.join(process.cwd(), "../public/app/assets/audio",
+            AudioBundleBuilder.getBundleFileName(plan.version)))).toBe(true);
     });
 
     it("finds every recording the committed manifest lists credited in the README beside it", () => {
@@ -525,6 +534,21 @@ describe("the game's own sounds", () => {
 
         expect(ProceduralSoundUtil.render({...knock, name: "test/other"}, RATE))
             .not.toEqual(ProceduralSoundUtil.render(knock, RATE));
+    });
+
+    it("hold a layer at its full level for its hold, and only then let it fall by its decay", () => {
+        const [attack, hold, decay] = [0.01, 0.1, 0.02];
+        const held: ProceduralSoundSpec = {name: "test/held", duration: 0.3, peak: 0.5, layers: [
+            {attack, hold, decay, gain: 1, tone: {frequency: [500, 500]}}]};
+        const made = ProceduralSoundUtil.render(held, RATE);
+        // Over a few of its cycles.
+        const levelAt = (t: number) => Math.max(...made.slice(Math.round(t * RATE), Math.round((t + 0.006) * RATE)).map(Math.abs));
+        expect(levelAt(attack + 0.01)).toBeCloseTo(0.5, 2);
+        expect(levelAt(attack + hold - 0.006)).toBeCloseTo(0.5, 2);
+        // (Its loudest there is within a cycle of where the window begins.)
+        const falling = 2 * decay;
+        expect(levelAt(attack + hold + falling)).toBeGreaterThan(0.5 * Math.exp(-(falling + 0.002) / decay) * 0.98);
+        expect(levelAt(attack + hold + falling)).toBeLessThan(0.5 * Math.exp(-falling / decay) * 1.02);
     });
 
     it("are each named once, short enough for the bundle, and, if a loop, go round a whole number of times in it", () => {
@@ -823,6 +847,52 @@ describe("a voice", () => {
         expect(context.gains).toEqual([]);
     });
 
+    const PHRASE = [{clip: "ui/blip", at: 0, rate: 1.2, volume: 1}, {clip: "music/a", at: 0.3, rate: 0.8, volume: 0.5},
+        {clip: "ui/blip", at: 0.45, rate: 1, volume: 0.9}] as unknown as AudioPhrasePart[];
+    const startPhrase = (voice: AudioVoice) =>
+        voice.start(context as unknown as BaseAudioContext, context.destination as unknown as AudioNode,
+            (output, onFinished, onReleased) => new BundledPhrasePlayer(context as unknown as BaseAudioContext, output,
+                bundle, voice.parts!, voice.rate, onFinished, onReleased));
+
+    it("plays a phrase's clips once each, at their own times, rates and loudness, then lets go of their nodes", () => {
+        context.currentTime = 1;
+        const rate = 1.25;
+        const voice = new AudioVoice(PHRASE.map(part => part.clip), false, 0.7, rate, PHRASE);
+        startPhrase(voice);
+        const [output, ...partGains] = context.gains;
+        expect(output.gain.value).toBe(0.7);
+        expect(context.sources).toHaveLength(PHRASE.length);
+        context.sources.forEach((source, i) => {
+            const clip = bundle.getClip(PHRASE[i].clip)!;
+            // The whole phrase's rate hurries its times along with its pitch.
+            expect(source.started).toEqual({when: 1 + PHRASE[i].at / rate, offset: clip.start, duration: clip.duration, at: 1});
+            expect(source.playbackRate.value).toBeCloseTo(rate * PHRASE[i].rate, 12);
+            expect(source.outputs).toEqual([partGains[i]]);
+            expect(partGains[i].gain.value).toBe(PHRASE[i].volume);
+            expect(partGains[i].outputs).toEqual([output]);
+        });
+
+        const end = Math.max(...context.sources.map(source => source.getEndTime()));
+        context.advance(end - context.currentTime - 0.001);
+        expect(voice.isEnded()).toBe(false);
+        context.advance(0.002);
+        expect(voice.isEnded()).toBe(true);
+        expect([...context.sources, ...context.gains].every(node => node.outputs.length == 0)).toBe(true);
+    });
+
+    it("stops a phrase's clips still to come with those playing, and fades out what was", () => {
+        const voice = new AudioVoice(PHRASE.map(part => part.clip), false, 1, 1, PHRASE);
+        startPhrase(voice);
+        context.advance(0.1);
+        voice.stop();
+        expect(voice.isEnded()).toBe(true);
+        for (const source of context.sources)
+            expect(source.stopTime).toBe(0.1 + AUDIO_STOP_FADE_SECONDS);
+        context.advance(AUDIO_STOP_FADE_SECONDS);
+        expect(context.sources.every(source => source.ended)).toBe(true);
+        expect([...context.sources, ...context.gains].every(node => node.outputs.length == 0)).toBe(true);
+    });
+
     it("hears a positioned sound through a gain, a muffler and a one-channel panner, at levels from where the camera is", () => {
         const range = 16;
         const position = {x: 4, y: 0, z: 0};
@@ -1025,7 +1095,7 @@ describe("the audio manager", () => {
         AudioManager.load(ASSETS_URL);
         AudioManager.load(ASSETS_URL);
         await settle();
-        expect(page.fetched).toEqual([`${ASSETS_URL}/${TEST_MAP.path}?v=${TEST_MAP.version}`]);
+        expect(page.fetched).toEqual([`${ASSETS_URL}/${TEST_MAP.path}`]);
 
         page = stubWebAudio();
         const streamsAlone = await importAudioManager({...NO_CLIPS_MAP, streams: TEST_MAP.streams});
@@ -1202,8 +1272,21 @@ describe("the audio manager", () => {
         expect(console.warn).toHaveBeenCalledWith("AudioManager :: Unknown clip (clip = none)");
         expect(AudioManager.playLoop(["music/a", "music/calm"] as never[]).isEnded()).toBe(true);
         expect(console.warn).toHaveBeenCalledTimes(2);
+        expect(AudioManager.playPhraseAt([{clip: "music/calm", at: 0, rate: 1, volume: 1}] as never[], ORIGIN).isEnded())
+            .toBe(true);
+        expect(console.warn).toHaveBeenCalledTimes(3);
         expect(context.sources).toEqual([]);
         expect(FakeMediaElement.instances).toEqual([]);
+    });
+
+    it("plays a phrase of the bundle's clips as one sound at a position", async () => {
+        const {AudioManager, context} = await readyAudioManager();
+        const voice = AudioManager.playPhraseAt([{clip: "ui/blip", at: 0, rate: 1, volume: 1},
+            {clip: "music/a", at: 0.2, rate: 1.5, volume: 0.5}] as never[], {x: 1, y: 0, z: 0}, {volume: 0.4, range: 8});
+        expect(voice.isEnded()).toBe(false);
+        expect(context.sources.map(source => source.playbackRate.value)).toEqual([1, 1.5]);
+        expect(context.panners).toHaveLength(1);
+        expect(context.gains[0].gain.value).toBe(0.4);
     });
 
     it("cuts every clip from where this browser's decoder put it", async () => {

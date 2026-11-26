@@ -48,7 +48,7 @@ function addLayer(samples: Float32Array, layer: ProceduralSoundLayer, sampleRate
     for (let i = start; i < samples.length; ++i)
     {
         const t = (i - start) / sampleRate;
-        const sinceAttack = Math.max(0, t - layer.attack);
+        const falling = Math.max(0, t - layer.attack - (layer.hold ?? 0));
         let value = 0;
         if (tone)
         {
@@ -56,7 +56,7 @@ function addLayer(samples: Float32Array, layer: ProceduralSoundLayer, sampleRate
             for (let k = 0; k < partials.length; ++k)
             {
                 phases[k] += 2 * Math.PI * frequency * partials[k].ratio / sampleRate;
-                value += partials[k].gain * fall(sinceAttack, partials[k].decay ?? layer.decay) * Math.sin(phases[k]);
+                value += partials[k].gain * fall(falling, partials[k].decay ?? layer.decay) * Math.sin(phases[k]);
             }
         }
         else if (noise)
@@ -69,7 +69,7 @@ function addLayer(samples: Float32Array, layer: ProceduralSoundLayer, sampleRate
                     grains += 0.3 + 0.7 * random();
                 excitation *= grains;
             }
-            value = fall(sinceAttack, layer.decay) * filter(filterState, excitation, noise.filter,
+            value = fall(falling, layer.decay) * filter(filterState, excitation, noise.filter,
                 glide(noise.frequency, noise.glide, t), noise.q ?? Math.SQRT1_2, sampleRate);
         }
 

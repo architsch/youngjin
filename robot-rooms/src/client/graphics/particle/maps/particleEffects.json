@@ -344,6 +344,226 @@
                     "colorCurve": ["#d8d2c8"]
                 }
             ]
+        },
+        "petVanish": {
+            "note": "A pet beamed out as it goes with its owner: thin streaks of light racing up through where it stood, a glitter of motes hanging in the column a moment longer, and a glow that swells and goes.",
+            "layers": [
+                {
+                    "sprite": "streak",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.25,
+                    "burst": 28,
+                    "spawnHalfSize": {"x": 0.38, "y": 0.38, "z": 0.7},
+                    "spread": 0.04,
+                    "speed": [1.6, 3.4],
+                    "lifetime": [0.5, 0.9],
+                    "size": [0.1, 0.16],
+                    "alphaCurve": [0, 1, 1, 0.7, 0],
+                    "colorCurve": ["#e8fbff", "#7fdcff", "#3aa0ff"]
+                },
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 30,
+                    "rate": 45,
+                    "duration": 0.35,
+                    "spawnHalfSize": {"x": 0.4, "y": 0.4, "z": 0.75},
+                    "spread": 0.6,
+                    "speed": [0.2, 0.9],
+                    "lifetime": [0.45, 0.85],
+                    "size": [0.08, 0.14],
+                    "turbulence": 0.25,
+                    "sizeCurve": [0.4, 1, 0.8, 0.3],
+                    "alphaCurve": [0, 1, 0.5, 1, 0.5, 0],
+                    "colorCurve": ["#ffffff", "#aee9ff", "#58b6ff"]
+                },
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.5, 0.5],
+                    "size": [2.6, 2.6],
+                    "sizeCurve": [0.5, 1, 0.9, 0.4],
+                    "alphaCurve": [0.7, 0.9, 0.5, 0],
+                    "colorCurve": ["#dff6ff", "#62c0ff"]
+                }
+            ]
+        },
+        "petDeath": {
+            "note": "A pet out of health, turned to scrap where it stood: dark smoke billowing off it, and a few sparks dropping away.",
+            "layers": [
+                {
+                    "sprite": "puff",
+                    "burst": 16,
+                    "spawnHalfSize": {"x": 0.3, "y": 0.3, "z": 0.5},
+                    "launch": "radial",
+                    "spread": 0.6,
+                    "speed": [1.5, 4],
+                    "lifetime": [0.7, 1.1],
+                    "size": [0.6, 0.95],
+                    "spin": [-2, 2],
+                    "gravity": -0.5,
+                    "drag": 7,
+                    "sizeCurve": [0.7, 1.1, 1.4, 1.6, 1.75],
+                    "alphaCurve": [0.95, 0.8, 0.55, 0.3, 0.1, 0],
+                    "colorCurve": ["#8a8580", "#5c5852", "#4a4744"]
+                },
+                {
+                    "sprite": "spark",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.1,
+                    "burst": 14,
+                    "launch": "radial",
+                    "spread": 0.8,
+                    "speed": [2, 5],
+                    "lifetime": [0.4, 0.7],
+                    "size": [0.1, 0.15],
+                    "gravity": 9,
+                    "drag": 1.5,
+                    "landing": true,
+                    "alphaCurve": [1, 1, 0.6, 0],
+                    "colorCurve": ["#fff1b8", "#ffb040", "#ff5a1a"]
+                }
+            ]
+        },
+        "petCharged": {
+            "note": "A battery put into a pet: a flash about it, a ring thrown out from it, and streaks of charge running up its body.",
+            "layers": [
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.3, 0.3],
+                    "size": [2.4, 2.4],
+                    "sizeCurve": [0.5, 1, 0.8, 0.5],
+                    "alphaCurve": [0.9, 0.8, 0.35, 0],
+                    "colorCurve": ["#f4ffd8", "#b8f06a", "#5fd14a"]
+                },
+                {
+                    "sprite": "ring",
+                    "additiveness": 0.8,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.4, 0.4],
+                    "size": [2.4, 2.4],
+                    "sizeCurve": [0.2, 0.65, 0.9, 1],
+                    "alphaCurve": [1, 0.8, 0.35, 0],
+                    "colorCurve": ["#efffd0", "#9be85a"]
+                },
+                {
+                    "sprite": "streak",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.18,
+                    "burst": 20,
+                    "spawnHalfSize": {"x": 0.42, "y": 0.42, "z": 0.6},
+                    "spread": 0.12,
+                    "speed": [1.5, 3],
+                    "lifetime": [0.4, 0.7],
+                    "size": [0.1, 0.15],
+                    "alphaCurve": [0, 1, 1, 0.6, 0],
+                    "colorCurve": ["#ffffff", "#d6ff8a", "#7be04a"]
+                }
+            ]
+        },
+        "petRepaired": {
+            "note": "A wrench put to a pet: a flash about it, a ring thrown out from it, and a shower of cool sparks struck off its body.",
+            "layers": [
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.24, 0.24],
+                    "size": [2.2, 2.2],
+                    "sizeCurve": [0.5, 1, 0.75],
+                    "alphaCurve": [1, 0.8, 0],
+                    "colorCurve": ["#ffffff", "#bfe6ff"]
+                },
+                {
+                    "sprite": "ring",
+                    "additiveness": 0.8,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.36, 0.36],
+                    "size": [2.2, 2.2],
+                    "sizeCurve": [0.2, 0.65, 0.9, 1],
+                    "alphaCurve": [1, 0.8, 0.35, 0],
+                    "colorCurve": ["#eaf6ff", "#7cc4ff"]
+                },
+                {
+                    "sprite": "spark",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.1,
+                    "burst": 30,
+                    "spawnHalfSize": {"x": 0.3, "y": 0.3, "z": 0.45},
+                    "launch": "radial",
+                    "spread": 0.9,
+                    "speed": [2.5, 6],
+                    "lifetime": [0.35, 0.65],
+                    "size": [0.12, 0.2],
+                    "gravity": 9,
+                    "drag": 2,
+                    "landing": true,
+                    "alphaCurve": [1, 1, 0.7, 0],
+                    "colorCurve": ["#ffffff", "#bfe6ff", "#4aa8ff"]
+                }
+            ]
+        },
+        "petStrike": {
+            "note": "A pet ramming another: a flash where they meet, and hot sparks thrown off it.",
+            "layers": [
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.14, 0.14],
+                    "size": [1.5, 1.5],
+                    "sizeCurve": [0.5, 1, 0.75],
+                    "alphaCurve": [1, 0.8, 0],
+                    "colorCurve": ["#ffffff", "#ffd98a"]
+                },
+                {
+                    "sprite": "spark",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.12,
+                    "burst": 20,
+                    "launch": "radial",
+                    "spread": 1.1,
+                    "speed": [3, 8],
+                    "lifetime": [0.22, 0.4],
+                    "size": [0.14, 0.22],
+                    "gravity": 9,
+                    "drag": 3,
+                    "alphaCurve": [1, 1, 0.7, 0],
+                    "colorCurve": ["#ffffff", "#ffe08a", "#ff9a2a"]
+                }
+            ]
+        },
+        "petSnore": {
+            "note": "A sleeping pet's breath: a \"z\" rising off it and growing as it goes, turned upright by its rise.",
+            "layers": [
+                {
+                    "sprite": "sleepZ",
+                    "orientation": "velocity",
+                    "burst": 1,
+                    "spawnHalfSize": {"x": 0.1, "y": 0.1, "z": 0},
+                    "spread": 0.3,
+                    "speed": [0.45, 0.55],
+                    "lifetime": [1.6, 1.9],
+                    "size": [0.3, 0.36],
+                    "sizeCurve": [0.55, 0.8, 1, 1.15, 1.3],
+                    "alphaCurve": [0, 1, 1, 0.8, 0],
+                    "colorCurve": ["#dbe6ff"]
+                }
+            ]
         }
     }
 }

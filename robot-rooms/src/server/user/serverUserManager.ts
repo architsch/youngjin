@@ -8,12 +8,14 @@ import ServerRoomManager from "../room/serverRoomManager";
 import ServerObjectManager from "../object/serverObjectManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
+import DBUserWriteQueueUtil from "../db/util/dbUserWriteQueueUtil";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
 import PlayerMessageExpiryUtil from "./util/playerMessageExpiryUtil";
+import PetPlayUtil from "../object/util/petPlayUtil";
 
 const socketUserContexts: {[userID: string]: UserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -21,6 +23,10 @@ const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 // Player metadata captured at disconnect, read on reconnect before DBUser (the DB write may not have
 // landed). Evicted on reconnect or by TTL (SocketsServer's stale-socket sweep).
 const recentDisconnectMetadata: {[userID: string]: {metadata: {[key: string]: string}; timestamp: number}} = {};
+
+// Users whose player arrived without what their row keeps of it, the row having failed to be read: such a player's
+// metadata is never saved, since it would replace what the row still keeps (their look, their pets) with nothing.
+const userIDsWithUnreadMetadata = new Set<string>();
 
 const ServerUserManager =
 {
@@ -43,9 +49,10 @@ const ServerUserManager =
         return socketUserContexts[userID] != undefined;
     },
     // Registers the user in the room and spawns their player. Returns the room joined, or undefined.
+    // playerMetadata: undefined if what their row keeps couldn't be read (see userIDsWithUnreadMetadata).
     addUserToRoom: async (socketUserContext: UserContext, roomRuntimeMemory: RoomRuntimeMemory,
         userID: string, playerObjectTransform: ObjectTransform,
-        playerMetadata: {[key: string]: string}): Promise<RoomRuntimeMemory | undefined> =>
+        playerMetadata: {[key: string]: string} | undefined): Promise<RoomRuntimeMemory | undefined> =>
     {
         const user = socketUserContext.user;
         const roomID = roomRuntimeMemory.room.id;
@@ -88,15 +95,20 @@ const ServerUserManager =
         else
             socketRoomContext.addSocketUserContext(userID, socketUserContext);
 
+        if (playerMetadata == undefined)
+            userIDsWithUnreadMetadata.add(userID);
+        else
+            userIDsWithUnreadMetadata.delete(userID);
+
         // Create the user's player object. Stored metadata outlives a change of user type (e.g. a demoted
         // admin's prefs), so keys the user may no longer set are left out.
         const restoredMetadata: {[key: number]: EncodableByteString} = {};
-        for (const key of Object.keys(playerMetadata))
+        for (const key of Object.keys(playerMetadata ?? {}))
         {
             const metadataKey = parseInt(key);
             if (!ObjectMetadataEntryMap.canUserSet(metadataKey, user))
                 continue;
-            restoredMetadata[metadataKey] = new EncodableByteString(playerMetadata[key]);
+            restoredMetadata[metadataKey] = new EncodableByteString(playerMetadata![key]);
         }
         if (user.userType == UserTypeEnumMap.Agent)
             restoredMetadata[ObjectMetadataKeyEnumMap.AgentMark] = new EncodableByteString("1");
@@ -135,7 +147,9 @@ const ServerUserManager =
             return;
         }
 
-        // Snapshot metadata before removing the player, for reconnects that arrive before the DB write.
+        // Snapshot metadata before removing the player, for reconnects that arrive before the DB write. How the pets the
+        // server plays for the user are goes into it first (see PetPlayUtil).
+        PetPlayUtil.noteLeaving(roomID, user.id);
         const metadataSnapshot = savePlayerMetadata ? extractPlayerMetadata(user.id) : undefined;
         if (savePlayerMetadata && metadataSnapshot)
             recentDisconnectMetadata[user.id] = {metadata: metadataSnapshot, timestamp: Date.now()};
@@ -155,6 +169,7 @@ const ServerUserManager =
         delete ServerRoomManager.currentRoomIDByUserID[user.id];
         delete roomRuntimeMemory.participantUserNameByID[user.id];
         delete playerObjectByUserID[user.id];
+        userIDsWithUnreadMetadata.delete(user.id);
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
@@ -162,9 +177,10 @@ const ServerUserManager =
         else
             socketRoomContext.removeSocketUserContext(user.id);
 
-        // Persisted after releasing in-memory state; the buffer covers reconnects until the write lands.
+        // Persisted after releasing in-memory state; the buffer covers reconnects until the write lands. In turn with the
+        // user's other writes (see DBUserWriteQueueUtil), so that none made earlier lands over it.
         if (savePlayerMetadata && metadataSnapshot)
-            await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
+            await DBUserWriteQueueUtil.run(user.id, () => DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot));
 
         await unloadRoomIfEmpty(roomRuntimeMemory);
     },
@@ -194,6 +210,12 @@ const ServerUserManager =
     {
         return playerObjectByUserID[userID];
     },
+    // Whether the user's player holds all their row keeps of it, so that what it holds may be written back (see
+    // userIDsWithUnreadMetadata).
+    hasReadPlayerMetadata: (userID: string): boolean =>
+    {
+        return playerObjectByUserID[userID] != undefined && !userIDsWithUnreadMetadata.has(userID);
+    },
     // WARNING: Use this method only in integration tests.
     clearPlayerObjects: (): void =>
     {
@@ -201,6 +223,7 @@ const ServerUserManager =
             delete playerObjectByUserID[key];
         for (const key in recentDisconnectMetadata)
             delete recentDisconnectMetadata[key];
+        userIDsWithUnreadMetadata.clear();
     },
 }
 
@@ -221,10 +244,11 @@ async function unloadRoomIfEmpty(roomRuntimeMemory: RoomRuntimeMemory): Promise<
     }
 }
 
+// Nothing for a player that arrived without what its row keeps (see userIDsWithUnreadMetadata).
 function extractPlayerMetadata(userID: string): {[key: string]: string} | undefined
 {
     const playerObject = playerObjectByUserID[userID];
-    if (!playerObject)
+    if (!playerObject || userIDsWithUnreadMetadata.has(userID))
         return undefined;
     const raw = playerObject.metadata;
     const out: {[key: string]: string} = {};

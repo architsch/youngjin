@@ -3,7 +3,7 @@
   "name": "net.thingspool/robot-rooms",
   "title": "Robot Rooms",
   "description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "websiteUrl": "https://thingspool.net/RobotRooms/skill.md",
   "icons": [
     {

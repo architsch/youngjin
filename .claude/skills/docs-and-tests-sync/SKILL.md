@@ -219,16 +219,19 @@ npm run test:integration
 ```
 
 Note that Vitest transpiles without type-checking, so a type error in a test file surfaces as a
-runtime failure or not at all. The type gate is the build, which is what CI runs:
+runtime failure or not at all. The type gate for `src/` is the build, which is what CI runs; the
+tests, with the dev tools they import, are type-checked by a config of their own, which the
+pre-commit hook runs before the suite (it never emits, and a clean run prints nothing), and the e2e
+specs by `tests/e2e/tsconfig.json`:
 
 ```bash
 npm run build
+npm run test:types
 ```
 
-Do **not** reach for a bare `npx tsc --noEmit` against the tsconfigs in `dev/config/`. Neither of
-them includes `tests/`, and both emit a wall of pre-existing `node_modules` declaration errors that
-have nothing to do with this change — it is a signal you would have to learn to ignore, which makes
-it worse than no signal.
+A bare `npx tsc --noEmit` against a tsconfig in `dev/config/` is a quicker check of `src/` alone,
+but it never stands in for the build. Never drop `--noEmit` there: those configs set an `outDir` for
+the build, so a bare `tsc -p` writes a `.js` for every source into `public/` or `dist/`.
 
 A change to the site's generator or its templates (the repository's `ssg/`) is verified in
 that folder instead, and its pages are built again, since the pre-commit hook also refuses pages in

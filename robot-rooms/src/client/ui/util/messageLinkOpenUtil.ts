@@ -38,6 +38,11 @@ const MessageLinkOpenUtil =
     {
         openInNewTab(href);
     },
+    // Whether an origin is the website's, whose pages show over the game.
+    isSiteOrigin: (origin: string): boolean =>
+    {
+        return getSiteOrigins().includes(origin);
+    },
 }
 
 function openInNewTab(href: string): void

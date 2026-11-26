@@ -11,4 +11,5 @@ export const InstancedMeshCompositionCodecTypeEnumMap: Record<string, number> =
     FramedPanel: 7,
     Cannon: 8,
     CannonBall: 9,
+    Pet: 10,
 }

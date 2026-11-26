@@ -5,8 +5,9 @@ import CameraUtil from "../../../../graphics/util/cameraUtil";
 import PointerDragInput from "./pointer/pointerDragInput";
 import PointerZoomInput from "./pointer/pointerZoomInput";
 import GizmoDragUtil from "../../../../graphics/util/gizmoDragUtil";
+import PlayModeSelectionUtil from "../../../../graphics/util/playModeSelectionUtil";
 import ScrollAreaUtil from "../../../../ui/util/scrollAreaUtil";
-import { gameModeObservable, numOpenPopupsObservable } from "../../../../system/clientObservables";
+import { gameModeObservable, numOpenPopupsObservable, playModeSelectionObservable } from "../../../../system/clientObservables";
 import { ongoingClientProcessExists } from "../../../../system/types/clientProcess";
 
 // Arbitrates pointer gestures regardless of camera mode: gizmo drags (GizmoDragUtil, offered every canvas
@@ -212,19 +213,20 @@ export default class PlayerPointerInput
         if (GizmoDragUtil.lastGestureWasClaimed() || !this.dragInput.gestureIsTap())
             return;
 
+        // The user may have pointed past everything drawn, or at a gizmo, which belongs to no object.
         const intersection = CameraUtil.castFromPointer(ev);
-        if (intersection == undefined)
-            return; // The user pointed past everything drawn.
-
-        // Gizmos belong to no object.
-        const gameObject = CameraUtil.getObjectFromIntersection(intersection);
-        if (gameObject == undefined)
+        const gameObject = (intersection == undefined) ? undefined : CameraUtil.getObjectFromIntersection(intersection);
+        const selectedBefore = playModeSelectionObservable.peek();
+        PlayModeSelectionUtil.onWorldClick(gameObject);
+        if (intersection == undefined || gameObject == undefined)
             return;
-
-        // In play mode, the eye camera pitches toward the hit (see FirstPersonCameraPose).
-        if (gameModeObservable.peek() == "play")
-            this.pendingClickedPoint = intersection.point.clone();
         gameObject.onClick(intersection.instanceId ?? -1, intersection.point);
+
+        // In play mode, the eye camera pitches toward the hit (see FirstPersonCameraPose), but for a click that ends a
+        // selection, after which it goes back to rest.
+        const endedSelection = selectedBefore != null && playModeSelectionObservable.peek() == null;
+        if (gameModeObservable.peek() == "play" && !endedSelection)
+            this.pendingClickedPoint = intersection.point.clone();
     }
 
     // For gestures whose end will never arrive (lost focus, player removed).

@@ -10,6 +10,7 @@
     { "type": "clickSurface", "objectType": "Voxel" },
     { "type": "expectSelection", "selection": { "voxelQuad": true } },
     { "type": "expect", "selector": "#addDoorButton", "state": "detached" },
+    { "type": "uiClick", "elementId": "decorationMenuButton" },
     { "type": "expect", "selector": "#addCanvasButton", "state": "visible" },
     { "type": "end" }
   ]

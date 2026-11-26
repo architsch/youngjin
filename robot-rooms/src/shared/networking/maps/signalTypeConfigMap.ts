@@ -6,6 +6,8 @@ import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
 import SetObjectPathSignal from "../../object/types/setObjectPathSignal";
 import ObjectCollectedSignal from "../../object/types/objectCollectedSignal";
+import InjectPetSignal from "../../object/types/injectPetSignal";
+import PetChatSignal from "../../object/types/petChatSignal";
 import InventorySignal from "../../inventory/types/inventorySignal";
 import LoginRewardSignal from "../../inventory/types/loginRewardSignal";
 import BuyItemSignal from "../../inventory/types/buyItemSignal";
@@ -135,10 +137,11 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         decode: (bufferState: BufferState) => HoldObjectSignal.decode(bufferState),
     }],
     // (Index 18 is retired too.)
-    [19, { // Unidirectional (client <- server)
-        // Where an object the server moves goes next (e.g. a dollar bill on the wind), which clients play out by themselves.
+    [19, { // Bidirectional (client <-> server)
+        // Where an object goes next, which clients play out by themselves: one the server moves (e.g. a dollar bill on
+        // the wind), or a pet, whose owner's client says where it goes and the server relays it.
         signalType: "setObjectPathSignal",
-        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        minClientToServerSendInterval: 0, // paid for from a budget instead (see UserSignalDispatchUtil).
         decode: (bufferState: BufferState) => SetObjectPathSignal.decode(bufferState),
     }],
     [20, { // Unidirectional (client <- server)
@@ -170,6 +173,18 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         signalType: "buyItemResultSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         decode: (bufferState: BufferState) => BuyItemResultSignal.decode(bufferState),
+    }],
+    [25, { // Bidirectional (client <-> server)
+        // A user asks to put a battery or a wrench into a pet, for dollars; the server tells the room that they have.
+        signalType: "injectPetSignal",
+        minClientToServerSendInterval: 0, // paid for from a budget instead (see UserSignalDispatchUtil).
+        decode: (bufferState: BufferState) => InjectPetSignal.decode(bufferState),
+    }],
+    [26, { // Unidirectional (client <- server)
+        // Someone speaking to a pet, and what it answers them, told to the browser that plays it.
+        signalType: "petChatSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => PetChatSignal.decode(bufferState),
     }],
 ];
 

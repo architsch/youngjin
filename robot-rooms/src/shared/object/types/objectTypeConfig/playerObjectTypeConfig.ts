@@ -10,6 +10,7 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh
 import { getRandomFreeComposition } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import StringUtil from "../../../math/util/stringUtil";
 import MessageLinkUtil from "../../util/messageLinkUtil";
+import PetRecordUtil from "../../util/petRecordUtil";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../system/sharedConstants";
 
 // The player collider size; exported because much of the game measures against the player's body.
@@ -54,6 +55,10 @@ const PlayerObjectTypeConfig =
         // User can only set the metadata of his/her own player character
         if (obj.sourceUserID != user.id)
             return false;
+
+        // Of their pets (see PetRecordUtil), a report of how they are alone: which pets they own is the server's to say.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.Pets)
+            return PetRecordUtil.isReport(signal.metadataValue);
 
         // User can only set the player's message, appearance, activity or admin prefs (admins only; see
         // ObjectMetadataEntryMap), nothing else

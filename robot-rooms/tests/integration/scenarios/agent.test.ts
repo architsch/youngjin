@@ -127,6 +127,25 @@ import LogUtil from "../../../src/shared/system/util/logUtil";
 import "../../../src/shared/graphics/image/imageMapDependencies";
 import AgentBlockUtil from "../../../src/server/agent/util/agentBlockUtil";
 import AgentObjectUtil from "../../../src/server/agent/util/agentObjectUtil";
+import AgentPetUtil from "../../../src/server/agent/util/agentPetUtil";
+import PetChatUtil, { PET_ANSWER_PAUSE_MS } from "../../../src/server/agent/util/petChatUtil";
+import PetLineMap from "../../../src/shared/object/maps/petLineMap";
+// What pets chat in, as the server has it.
+import "../../../src/server/agent/data/petLines";
+import { PET_REACTION_MS } from "../../../src/shared/object/util/petBehaviorUtil";
+import PetPlayUtil from "../../../src/server/object/util/petPlayUtil";
+import DBUserWriteQueueUtil from "../../../src/server/db/util/dbUserWriteQueueUtil";
+import PetShownState from "../../../src/shared/object/types/petShownState";
+import DoorEntranceUtil from "../../../src/shared/object/util/doorEntranceUtil";
+import PetBodyUtil from "../../../src/shared/object/util/petBodyUtil";
+import PetIdentityUtil, { PET_COLOR_PALETTE_NAME } from "../../../src/shared/object/util/petIdentityUtil";
+import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import PetOwnerUtil from "../../../src/shared/object/util/petOwnerUtil";
+import PetRecordUtil from "../../../src/shared/object/util/petRecordUtil";
+import PetSaleUtil from "../../../src/shared/object/util/petSaleUtil";
+import PetShownStateUtil, { PET_BATTERY_LEVELS, PET_RUST_LEVELS } from "../../../src/shared/object/util/petShownStateUtil";
+import { PET_BATTERY_PRICE_DOLLARS, PET_PRICE_DOLLARS,
+    PET_WRENCH_PRICE_DOLLARS } from "../../../src/shared/system/sharedConstants";
 import AgentSignalUtil from "../../../src/server/agent/util/agentSignalUtil";
 import AgentGridUtil from "../../../src/server/agent/util/agentGridUtil";
 import AgentFace from "../../../src/server/agent/types/agentFace";
@@ -1493,6 +1512,182 @@ describe("AI agents", () => {
         });
     });
 
+    describe("pets", () => {
+        const FLOOR: AgentFace = {row: 20, column: 20, layer: -1, side: "up"};
+        const DOLLAR = InventoryItemTypeEnumMap.Dollar;
+        const petsIn = (room: Room) => Object.values(room.objectById).filter(obj => PetOwnerUtil.isPet(obj));
+        const recordsOf = (agent: AgentUserContext) =>
+            PetRecordUtil.getPlayerRecords(ServerUserManager.getPlayerObject(agent.user.id));
+        // As whoever plays a pet shows it.
+        const show = (room: Room, petId: string, changes: Partial<PetShownState>) => {
+            const pet = room.objectById[petId];
+            pet.metadata[ObjectMetadataKeyEnumMap.PetState] = new EncodableByteString(
+                PetShownStateUtil.encode({...PetShownStateUtil.getObjectState(pet), ...changes}));
+        };
+        const stepPets = (count: number) => {
+            for (let i = 0; i < count; ++i)
+            {
+                flush(1);
+                PetPlayUtil.stepAll(0.2);
+            }
+        };
+
+        // What a pet's price left on its way to a row lands before the next scene, whose agents go by other ids.
+        afterEach(async () => {
+            await DBUserWriteQueueUtil.drain();
+        });
+
+        it("generate_pet buys one that stands on a floor, named and of the nature asked for, which look lists", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Keeper");
+            agent.inventory[DOLLAR] = PET_PRICE_DOLLARS - 1;
+            const poor = await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR}) as any;
+            expect(poor.error).toContain(`costs $${PET_PRICE_DOLLARS}`);
+            expect(poor.error).toContain(`hold $${PET_PRICE_DOLLARS - 1}`);
+
+            agent.inventory[DOLLAR] = PET_PRICE_DOLLARS + 4;
+            expect((await AgentPetUtil.generate(agent, {name: "  ", on: FLOOR}) as any).error).toContain("name");
+            expect((await AgentPetUtil.generate(agent,
+                {name: "Rex", on: {row: 1, column: 20, layer: 3, side: "south"}}) as any).error).toMatch(/floor/);
+            expect(petsIn(roomOf(agent))).toEqual([]);
+            expect(agent.inventory[DOLLAR]).toBe(PET_PRICE_DOLLARS + 4);
+
+            receivedSignals(human);
+            // A color is given as a color, and made the nearest a pet can be painted.
+            expect((await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR, color: "mint"}) as any).error)
+                .toMatch(/#rrggbb/);
+            const petColors = ColorPaletteMap[PET_COLOR_PALETTE_NAME];
+            const nearly = ColorUtil.hexToRGB(petColors[petColors.length - 1]);
+            const result = await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR, aggressiveness: "high",
+                bravery: "low", curiosity: "high", color: ColorUtil.rgbToHex({...nearly, x: nearly.x - 3})}) as any;
+            expect(result).toEqual(expect.objectContaining({spent: PET_PRICE_DOLLARS, dollars: 4}));
+            expect(result.generated).toEqual(expect.objectContaining({color: petColors[petColors.length - 1]}));
+            expect(result.generated).toEqual(expect.objectContaining({name: "Rex", owner: "Keeper", yours: true,
+                at: expect.objectContaining({row: FLOOR.row, column: FLOOR.column}),
+                battery: `${PET_BATTERY_LEVELS}/${PET_BATTERY_LEVELS}`, rust: `0/${PET_RUST_LEVELS}`,
+                takesBattery: false, takesWrench: false, sellsFor: PET_PRICE_DOLLARS}));
+            const id = result.generated.id;
+            expect(PetIdentityUtil.getObjectIdentity(roomOf(agent).objectById[id]).traits).toEqual(expect.objectContaining(
+                {dependence: 1, sociability: 1, aggressiveness: 2, bravery: 0, curiosity: 2}));
+            // The room is sent it as a person's is, and it is the agent's from then on.
+            expect(receivedSignals(human).filter(({signalType}) => signalType == "addObjectSignal")).toHaveLength(1);
+            expect(recordsOf(agent).map(record => record.petId)).toEqual([id]);
+
+            // look lists it, to its owner with what it would sell for, and to anyone else without.
+            expect((AgentToolUtil.look(agent) as any).pets).toEqual([expect.objectContaining(
+                {id, name: "Rex", yours: true, sellsFor: PET_PRICE_DOLLARS})]);
+            const visitor = await arriveAgent("Visitor");
+            const seen = (AgentToolUtil.look(visitor) as any).pets;
+            expect(seen).toEqual([expect.objectContaining({id, name: "Rex", owner: "Keeper"})]);
+            expect(seen[0].yours).toBeUndefined();
+            expect(seen[0].sellsFor).toBeUndefined();
+        });
+
+        it("inject_pet charges or mends any pet the better for it, and sell_pet sells one's own, as remove_object says", async () => {
+            const agent = await arriveAgent("Keeper");
+            const visitor = await arriveAgent("Visitor");
+            agent.inventory[DOLLAR] = PET_PRICE_DOLLARS;
+            const {id} = (await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR}) as any).generated;
+            const room = roomOf(agent);
+
+            // Charged and clean, it takes neither; nor does a pet that isn't there, nor anything else go into one.
+            visitor.inventory[DOLLAR] = PET_BATTERY_PRICE_DOLLARS + PET_WRENCH_PRICE_DOLLARS;
+            expect((await AgentPetUtil.inject(visitor, id, "battery") as any).error).toMatch(/full/);
+            expect((await AgentPetUtil.inject(visitor, id, "wrench") as any).error).toMatch(/no rust/);
+            expect((await AgentPetUtil.inject(visitor, id, "oil") as any).error).toMatch(/battery or a wrench/);
+            expect((await AgentPetUtil.inject(visitor, "nobody00", "battery") as any).error).toMatch(/No pet/);
+            expect(visitor.inventory[DOLLAR]).toBe(PET_BATTERY_PRICE_DOLLARS + PET_WRENCH_PRICE_DOLLARS);
+
+            show(room, id, {batteryLevel: 1, rust: PET_RUST_LEVELS - 1});
+            const charged = await AgentPetUtil.inject(visitor, id, "battery") as any;
+            expect(charged).toEqual(expect.objectContaining({given: "battery", spent: PET_BATTERY_PRICE_DOLLARS,
+                dollars: PET_WRENCH_PRICE_DOLLARS}));
+            expect(charged.pet.battery).toBe(`${PET_BATTERY_LEVELS}/${PET_BATTERY_LEVELS}`);
+            const mended = await AgentPetUtil.inject(visitor, id, "wrench") as any;
+            expect(mended).toEqual(expect.objectContaining({given: "wrench", spent: PET_WRENCH_PRICE_DOLLARS, dollars: 0}));
+            expect(PetShownStateUtil.getObjectState(room.objectById[id]).rust).toBeLessThan(PET_RUST_LEVELS - 1);
+            // With nothing left to pay with, the next is refused, saying what it costs.
+            expect((await AgentPetUtil.inject(visitor, id, "wrench") as any).error).toContain(`costs $${PET_WRENCH_PRICE_DOLLARS}`);
+
+            // Only its owner sells it, which is what removing it is.
+            expect((await AgentPetUtil.sell(visitor, id) as any).error).toMatch(/owner/);
+            expect((await AgentObjectUtil.removeObject(agent, id) as any).error).toContain("sell_pet");
+            expect(room.objectById[id]).toBeDefined();
+            const sold = await AgentPetUtil.sell(agent, id) as any;
+            expect(sold).toEqual({sold: id, for: PetSaleUtil.getPrice(1), dollars: PetSaleUtil.getPrice(1)});
+            expect(room.objectById[id]).toBeUndefined();
+            expect(recordsOf(agent)).toEqual([]);
+            expect((await AgentPetUtil.sell(agent, id) as any).error).toMatch(/No pet/);
+        });
+
+        it("an agent's pet is played by the server, and comes into the next room after it for nothing, out of the door it came by", async () => {
+            harness.seedHub(OTHER_HUB_ID);
+            const agent = await arriveAgent("Keeper");
+            agent.inventory[DOLLAR] = PET_PRICE_DOLLARS;
+            const {id} = (await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR}) as any).generated;
+            stepPets(10);
+            expect(PetPlayUtil.getNeeds(roomOf(agent), id)).toBeDefined();
+            expect(roomOf(agent).objectById[id].metadata[ObjectMetadataKeyEnumMap.PetState]?.str ?? "").not.toBe("");
+
+            waitOutTripThrottle();
+            await AgentToolUtil.travel(agent, OTHER_HUB_ID);
+            expect(currentRoomID(agent)).toBe(OTHER_HUB_ID);
+            expect(ServerRoomManager.roomRuntimeMemories[HUB_ID]?.room.objectById[id]).toBeUndefined();
+            // One at a time, once the spot in front of the door is clear, or beside it having waited.
+            for (let i = 0; i < 100 && roomOf(agent).objectById[id] == undefined; ++i)
+                stepPets(1);
+            const room = roomOf(agent);
+            const pet = room.objectById[id];
+            expect(PetIdentityUtil.getObjectIdentity(pet).name).toBe("Rex");
+            expect(pet.sourceUserID).toBe(agent.user.id);
+            expect(agent.inventory[DOLLAR]).toBe(0);
+            expect(recordsOf(agent).map(record => record.petId)).toEqual([id]);
+
+            // It is put behind the door, in the wall, where none could be generated, and walks out of it as its owner
+            // does: as far out as that walk goes, clear of every block.
+            const door = Object.values(room.objectById).find(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Door"))!;
+            const walk = DoorEntranceUtil.getWalk(room, DoorEntranceUtil.getArrivalTransform(room, door).pos)!;
+            const stride = Math.hypot(walk.to.x - walk.from.x, walk.to.z - walk.from.z);
+            const getWalked = () => ((pet.transform.pos.x - walk.from.x) * (walk.to.x - walk.from.x)
+                + (pet.transform.pos.z - walk.from.z) * (walk.to.z - walk.from.z)) / stride;
+            expect(PetBodyUtil.isClear(room, pet.transform.pos)).toBe(false);
+            let flushes = 0;
+            for (; flushes < 40 && getWalked() < 0.85 * stride; ++flushes)
+                stepPets(1);
+            expect(flushes).toBeLessThan(20);
+            expect(PetBodyUtil.isClear(room, pet.transform.pos)).toBe(true);
+        });
+
+        it("say tells which pet heard it, and whats_new brings what the pet answers, as a pet's words", async () => {
+            const agent = await arriveAgent("Keeper");
+            agent.inventory[DOLLAR] = PET_PRICE_DOLLARS;
+            const {id} = (await AgentPetUtil.generate(agent, {name: "Rex", on: FLOOR}) as any).generated;
+            stepPets(5);
+            eventsOf(agent);
+
+            const said = await AgentToolUtil.say(agent, "Rex, hello") as any;
+            expect(said).toEqual(expect.objectContaining({saying: "Rex, hello", heardBy: "Rex"}));
+            expect(said.note).toMatch(/pet/);
+            // No model is set up here, so it answers in a fixed word or two (see PetChatUtil), once the agent has paused
+            // and it has taken in that it was spoken to.
+            const answerFlushes = Math.ceil((PET_ANSWER_PAUSE_MS + PET_REACTION_MS[1]) / 200) + 10;
+            const speech: AgentEvent[] = [];
+            for (let i = 0; i < answerFlushes; ++i)
+            {
+                stepPets(1);
+                PetChatUtil.stepAll();
+                await new Promise(resolve => setImmediate(resolve));
+                speech.push(...eventsOf(agent).filter(event => event.kind == "speech"));
+            }
+            expect(speech).toContainEqual(expect.objectContaining({who: "Rex", whoIsPet: true}));
+            // Each a fixed line, with a robot's sound before or after it at times (see PetLineMap.vary).
+            const fixedLines = PetLineMap.getAllLines().map(line => line.text);
+            for (const said of speech.filter(event => event.whoIsPet).map(event => event.text ?? ""))
+                expect(fixedLines.some(line => said.includes(line)), said).toBe(true);
+            expect((AgentToolUtil.look(agent) as any).pets.find((pet: any) => pet.id == id)).toBeDefined();
+        });
+    });
+
     describe("tools", () => {
         it("look tells the room, where the agent stands, and the people nearest it with their speech", async () => {
             const human = await joinHuman("Alice");
@@ -1549,6 +1744,11 @@ describe("AI agents", () => {
 
             await setActivity(human, SpeakerActivityEnumMap.Reading);
             expect(alice()).toEqual(expect.objectContaining({reading: true}));
+            expect(alice().saying).toBeUndefined();
+            // Behind another tab, rather than on a page over the game: away.
+            await setActivity(human, SpeakerActivityEnumMap.Away);
+            expect(alice()).toEqual(expect.objectContaining({away: true}));
+            expect(alice().reading).toBeUndefined();
             expect(alice().saying).toBeUndefined();
 
             await setActivity(human, SpeakerActivityEnumMap.Typing);
@@ -3094,8 +3294,10 @@ describe("AI agents", () => {
                 const tools = listed.map(tool => tool.name).sort();
                 expect(tools).toEqual(["add_object", "add_zone", "appearance", "camera", "change_appearance",
                     "change_room_settings", "collect_bill", "edit_object", "face",
-                    "find_pictures", "find_rooms", "inventory", "leave", "look", "look_blocks", "move_object", "new_key", "paint_faces",
-                    "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
+                    "find_pictures", "find_rooms", "generate_pet", "inject_pet", "inventory", "leave", "look", "look_blocks",
+                    "move_object", "new_key", "paint_faces",
+                    "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "sell_pet",
+                    "set_interests",
                     "textures", "travel", "typing", "unlock_shape", "use_door", "walk_to", "whats_new"]);
                 // A connector directory lists a tool by its title, and asks whether it only reads or may destroy.
                 for (const tool of listed)

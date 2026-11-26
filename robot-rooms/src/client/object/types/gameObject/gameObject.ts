@@ -17,6 +17,7 @@ import GameModeUtil from "../../../system/util/gameModeUtil";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
 import PlayModeClickCallbackMap from "../../maps/playModeClickCallbackMap";
+import PlayModeSelectionUtil from "../../../graphics/util/playModeSelectionUtil";
 
 const cameraPosTemp = new THREE.Vector3();
 const positionTemp = new THREE.Vector3();
@@ -64,13 +65,20 @@ export default abstract class GameObject
     }
 
     // Selects the object in edit mode, as the user's own act (see WorldSpaceSelectionUtil.trySelectManually); in
-    // play mode, does what its type does when clicked (see PlayModeClickCallbackMap). Whether either happened.
+    // play mode, selects it, or lets it go if it is selected, if its type is selected there too (see
+    // PlayModeSelectionUtil), or else does what its type does when clicked (see PlayModeClickCallbackMap). Whether any
+    // of these happened.
     onClick(instanceId: number, hitPoint: THREE.Vector3): boolean
     {
         if (WorldSpaceSelectionUtil.trySelectManually(() => this.trySelect(instanceId)))
             return true;
         if (GameModeUtil.getGameMode() != "play")
             return false;
+        if (this.canBeSelectedInPlayMode())
+        {
+            PlayModeSelectionUtil.toggle(this);
+            return true;
+        }
 
         const entry = PlayModeClickCallbackMap[this.config.objectType];
         const variant = (entry?.variantKey != undefined) ? (this.params.metadata[entry.variantKey]?.str ?? "") : "";
@@ -102,6 +110,16 @@ export default abstract class GameObject
             return false;
 
         return selectionConfig.canBeSelectedByUserInEditMode(this, App.getUser(), room);
+    }
+
+    // Whether a click selects it in play mode (see PlayModeSelectionUtil): only a type that says so, for this user.
+    canBeSelectedInPlayMode(): boolean
+    {
+        const selectable = ObjectTypeClientConfigMap.getConfigByIndex(this.params.objectTypeIndex)
+            .selection?.canBeSelectedByUserInPlayMode;
+        const room = App.getCurrentRoom();
+        return GameModeUtil.getGameMode() == "play" && selectable != undefined && room != undefined
+            && selectable(this, App.getUser(), room);
     }
 
     // Optional callbacks for subclasses:

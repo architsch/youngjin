@@ -319,6 +319,23 @@ vi.mock("../../../src/server/db/util/dbInventoryUtil", async () => {
     }};
 });
 
+vi.mock("../../../src/server/db/util/dbPetUtil", async () => {
+    const {ObjectMetadataKeyEnumMap} = await import("../../../src/shared/object/types/objectMetadataKey");
+    return {default: {
+        // Its being one transaction, which leaves the rest of the row alone, is the DB suite's.
+        savePets: vi.fn(async (userID: string, pets: string, dollarsChange: number) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const u = _userStore[userID];
+            if (u == undefined)
+                return false;
+            u.playerMetadata = {...u.playerMetadata, [ObjectMetadataKeyEnumMap.Pets]: pets};
+            if (dollarsChange != 0)
+                u.inventory = {...u.inventory, dollar: (u.inventory?.dollar ?? 0) + dollarsChange};
+            return true;
+        }),
+    }};
+});
+
 vi.mock("../../../src/server/db/util/dbOAuthClientUtil", () => ({
     default: {
         create: vi.fn(async (clientID: string, name: string, redirectURIs: string[]) => {

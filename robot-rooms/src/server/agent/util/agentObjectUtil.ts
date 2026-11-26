@@ -35,6 +35,8 @@ import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal"
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import PetIdentityUtil from "../../../shared/object/util/petIdentityUtil";
+import PetOwnerUtil from "../../../shared/object/util/petOwnerUtil";
 import HelperBehaviorUtil from "../../../shared/object/util/helperBehaviorUtil";
 import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
 import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
@@ -88,6 +90,11 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+const petScrapTypeIndex = ObjectTypeConfigMap.getIndexByType("PetScrap");
+
+const PET_SCRAP_NOTE = "What is left of a pet that ran out of health, under the pet's name (text). It does nothing, but "
+    + "is still in the way, and a cannon ball bounces off it. Anyone may move it (move_object); only the pet's owner (by) "
+    + "or an admin removes it (remove_object).";
 
 const CANNON_NOTE = `A cannon: while on, it waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} `
     + "seconds, then turns after the nearest person until it has pointed a while at one it can fire at (within "
@@ -370,6 +377,8 @@ const AgentObjectUtil =
         if (room == undefined)
             return {error: NOT_IN_A_ROOM};
         const obj = room.objectById[objectId];
+        if (PetOwnerUtil.isPet(obj))
+            return {error: "A pet isn't removed: its owner sells it (sell_pet)."};
         if (obj == undefined || !isEditable(obj))
             return {error: NOTHING_BY_THAT_ID};
         const signal = new RemoveObjectSignal(room.id, objectId);
@@ -426,7 +435,9 @@ function describeObject(obj: AddObjectSignal): object
     const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
     const transform = ObjectAttachmentUtil.quantize(obj.objectTypeIndex, obj.transform);
     const imagePath = obj.metadata[ObjectMetadataKeyEnumMap.ImagePath]?.str;
-    const text = LabelTextUtil.getText(obj);
+    // (What is left of a pet is still under the pet's name.)
+    const text = (obj.objectTypeIndex == petScrapTypeIndex) ? PetIdentityUtil.getObjectIdentity(obj).name
+        : LabelTextUtil.getText(obj);
     const image = (imagePath != undefined && ImageMapUtil.getImageMap("PictureImageMap").hasImagePath(imagePath))
         ? ImageMapUtil.getImageMap("PictureImageMap").getImageMetadataByPath(imagePath) : undefined;
     return {
@@ -441,6 +452,7 @@ function describeObject(obj: AddObjectSignal): object
         by: (obj.sourceUserName.length > 0) ? obj.sourceUserName : undefined,
         ...((obj.objectTypeIndex == cannonTypeIndex) ? describeCannon(obj) : {}),
         note: (obj.objectTypeIndex == npcTypeIndex) ? STILL_NPC_NOTE
+            : (obj.objectTypeIndex == petScrapTypeIndex) ? PET_SCRAP_NOTE
             : (obj.objectTypeIndex == mirrorTypeIndex) ? describeMirror(obj)
             : (obj.objectTypeIndex != cannonTypeIndex) ? undefined
             : CannonStateUtil.isScrap(obj) ? SCRAP_NOTE : CANNON_NOTE,
@@ -776,6 +788,8 @@ function describeUntouchable(room: Room, user: User, obj: AddObjectSignal, chang
         return `Only an admin ${change} a mirror.`;
     if (objectType == "Cannon" && change == "removes" && !CannonStateUtil.isScrap(obj))
         return CANNON_STAYS;
+    if (objectType == "PetScrap" && change == "removes")
+        return "Only the owner of the pet it was (by), or an admin, removes a pet's scrap.";
     if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
         return "A restricted zone covers it (look lists the zones).";
     return "That can't be done to it.";

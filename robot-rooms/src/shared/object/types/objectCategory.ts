@@ -17,4 +17,7 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
     Collectible: "Collectible",
     Cannon: "Cannon",
     CannonBall: "CannonBall",
+    Pet: "Pet", // the pets that come and go with their owners
+    ServerPet: "ServerPet", // the pets a room keeps
+    PetScrap: "PetScrap",
 }

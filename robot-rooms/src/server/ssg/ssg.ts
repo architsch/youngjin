@@ -8,6 +8,7 @@ import { ImageMapSeeds } from "./data/imageMapSeeds";
 import RoomMapBuilder from "./builder/roomMapBuilder";
 import { RoomMapSeeds } from "./data/roomMapSeeds";
 import AudioBundleBuilder from "./builder/audioBundleBuilder";
+import PetLinesBuilder from "./builder/petLinesBuilder";
 // Capacities decode compositions, which needs the part builders registered.
 import "../../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
@@ -39,6 +40,10 @@ export default async function SSG(): Promise<void>
     const preEncodedCompositions = await new PreEncodedCompositionBuilder().build();
     await new InstancedMeshCapacityBuilder(preEncodedCompositions).build();
     await new CompositionThumbnailBuilder(preEncodedCompositions, process.env.MODE == "ssg").build();
+
+    // Write what pets chat in, for browsers to fetch
+
+    await new PetLinesBuilder().build();
 
     // Generate the Audio Bundle, last: the dev server watches the map it writes, and restarts as soon as that changes.
 

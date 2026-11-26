@@ -6,10 +6,17 @@ import INSTANCE_COLOR_FRAGMENT_GLSL from "./instanceColorGLSL";
 // Procedural antique tin toy: the instance color becomes aged paint over sheet metal. Paint wears off
 // edges and corners (bare tin), rust blooms from worn spots and coarse-noise peaks, and fine grain
 // mottles everything. A tight Phong specular sells the metal.
+//
+// An instance may be older or newer than that (see TIN_RUST_ATTRIBUTE): from -1, paint unworn and without rust,
+// through 0, the look above, which a mesh that sets none has, to 1, rusted through.
+
+export const TIN_RUST_ATTRIBUTE = "tinRust";
 
 const VERTEX_PARS_GLSL = `
+    attribute float ${TIN_RUST_ATTRIBUTE};
     varying vec3 vTinSurfacePos;
     varying vec3 vTinLocalPos;
+    varying float vTinAge;
 `;
 
 const VERTEX_GLSL = `
@@ -25,11 +32,16 @@ const VERTEX_GLSL = `
     vTinSurfacePos = position * tinPartScale * 16.0 + tinPartScale * 41.0;
     // Edge distance is only meaningful after interpolation (every vertex is a corner).
     vTinLocalPos = position;
+    vTinAge = clamp(${TIN_RUST_ATTRIBUTE}, -1.0, 1.0);
 `;
 
 const FRAGMENT_PARS_GLSL = `
     varying vec3 vTinSurfacePos;
     varying vec3 vTinLocalPos;
+    varying float vTinAge;
+    // How far an instance's age moves the noise its rust blooms from: at its oldest nearly all of it is over the
+    // threshold, at its newest none.
+    const float TIN_AGE_RUST_SHIFT = 0.45;
     // Linear-space colors.
     const vec3 TIN_RUST_COLOR = vec3(0.147, 0.033, 0.009); // deep orange-brown corrosion
     const vec3 TIN_BARE_COLOR = vec3(0.342, 0.342, 0.319); // unpainted sheet metal
@@ -49,10 +61,10 @@ const COLOR_FRAGMENT_GLSL = `
     float tinEdge = smoothstep(0.72, 1.0,
         tinAxisDist.x + tinAxisDist.y + tinAxisDist.z - tinFarAxis - tinNearAxis);
 
-    float tinPatch = valueNoiseFbm(vTinSurfacePos);
+    float tinPatch = valueNoiseFbm(vTinSurfacePos) + TIN_AGE_RUST_SHIFT * vTinAge;
     float tinGrain = valueNoise(vTinSurfacePos * 5.0);
 
-    float tinWearAmount = tinEdge * (0.35 + 0.65 * tinGrain);
+    float tinWearAmount = min(1.0, tinEdge * (0.35 + 0.65 * tinGrain) * (1.0 + vTinAge));
     float tinRustAmount = clamp(
         smoothstep(0.56, 0.76, tinPatch) + 0.5 * tinWearAmount * smoothstep(0.40, 0.62, tinPatch),
         0.0, 1.0) * (0.6 + 0.4 * tinGrain);

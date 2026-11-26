@@ -5,7 +5,7 @@ import ChatSentMessage from "./chatSentMessage";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import SpeechBubble from "../../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
-import { clientFeatureFlagsObservable, roomChangedObservable, singlePlayerChatLineObservable }
+import { chatLineObservable, clientFeatureFlagsObservable, roomChangedObservable, singlePlayerChatLineObservable }
     from "../../../../system/clientObservables";
 import App from "../../../../app";
 import RoomRuntimeMemory from "../../../../../shared/room/types/roomRuntimeMemory";
@@ -151,6 +151,8 @@ function setMyPlayerSentMessage(player: GameObject, message: string, tellServer:
     {
         (player.components.speechBubble as SpeechBubble).setMessage(message, tellServer);
         HelperThinkingUtil.expectAnswerTo(message);
+        if (tellServer && message.length > 0)
+            chatLineObservable.set({userID: App.getUser().id, text: message});
     }
 }
 

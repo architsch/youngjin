@@ -76,6 +76,11 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     "LabelColor": [...FULL_SPECTRUM_COLORS],
     // A mirror's surface, laid over its reflection (see MirrorObjectTypeConfig).
     "Mirror": [...FULL_SPECTRUM_COLORS],
+    // A pet's body (see PetIdentity.colorIndex): a few of tin's (see "Player"), white first, which a pet stored with no
+    // color chosen reads back.
+    "Pet": [
+        "#ffffff", "#2a2a2a", "#979797", "#f5e69f", "#877666", "#cc903e", "#9ce9a1", "#82ccfd", "#96a3f1", "#dbaef2",
+    ],
     // Light colors (lamps, ambient, head light). Index 0 is white, which unconfigured rooms read back.
     // All entries are full brightness (hue and tint only), since strength is a separate setting and
     // light can only add. Few and far apart, roughly palest to most saturated.

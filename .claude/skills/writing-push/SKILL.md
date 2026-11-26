@@ -106,6 +106,10 @@ Then sync:
 - If it continues a subject that has a feed of its own
   (`ssg/data/feedTopicData.ts`; Planet IF reads `narrative.atom`), ask him
   whether it joins. Adding its path there is a site change he approves and deploys.
+- **Bring the game's AI characters up to date with it**, for a post they don't know yet: invoke the
+  `gameplay-ai` skill (with the Skill tool), which gives the helpers in Robot Rooms an entry on it and
+  the pets a line that links it, in place of an older one, so both talk about what he has just written.
+  Its changes are to the game's source, left for him to commit and deploy, and go in this run's report.
 
 ## Step 3 — Look for people and routes
 

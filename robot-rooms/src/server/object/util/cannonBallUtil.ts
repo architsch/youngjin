@@ -38,9 +38,11 @@ import ServerUserManager from "../../user/serverUserManager";
 import PlayerMotionCheckUtil from "../../user/util/playerMotionCheckUtil";
 import ServerObjectManager from "../serverObjectManager";
 import CannonBallFlight from "../types/cannonBallFlight";
+import PetPlayUtil from "./petPlayUtil";
 
 const BALL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(CannonBallObjectTypeConfig.objectType);
 const CANNON_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(CannonObjectTypeConfig.objectType);
+const PLAYER_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
 const STATE_KEY = ObjectMetadataKeyEnumMap.CannonState;
 // How many times in one step a ball may strike something that doesn't end it (another ball, a mirror, an NPC), before
 // it rests until the next.
@@ -56,10 +58,10 @@ const roomFlights = new WeakMap<RoomRuntimeMemory, Map<string, CannonBallFlight>
 // (see CannonBallMotionUtil): each straight on until it strikes something, or is far out of the room, where it is
 // taken away without a word. Off a mirror, an NPC or a cannon it bounces, the faster for it, and that is all. Where it
 // strikes anything else, everything within its blast's reach of that spot is looked at. Balls there bounce off it as
-// billiard balls do, pushed apart. With a player there, a voxel block, the room's own floor or ceiling, or having
-// struck anything else solid, it bursts: the players are thrown, each by whoever moves them (see CannonBlastUtil), the
-// blocks are broken, with what hangs on them, where anybody at all could have taken them away and no cannon hangs on
-// them, and it leaves a dollar bill behind if it threw nobody. Browsers fly each ball by themselves from what they are
+// billiard balls do, pushed apart. With a body there (a player or a pet), a voxel block, the room's own floor or
+// ceiling, or having struck anything else solid, it bursts: the bodies are thrown, each by whoever moves it (see
+// CannonBlastUtil), the blocks are broken, with what hangs on them, where anybody at all could have taken them away and
+// no cannon hangs on them, and it leaves a dollar bill behind if it threw nobody. Browsers fly each ball by themselves from what they are
 // told of it: as it is fired, whenever something turns it, and that it burst, just before it goes. A room's saves keep
 // its balls as they fly (see ObjectTypeConfigMap.isStoredWithRoom).
 const CannonBallUtil =
@@ -232,6 +234,7 @@ function burst(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObje
     tell(room, ball);
 
     thrown.forEach((object, i) => throwBody(room, object, headings[i]));
+    PetPlayUtil.noteBurst(room, flight.pos);
     const nearness = (block: {row: number, col: number, collisionLayer: number}) => Vector3DUtil.distSqr(flight.pos,
         VoxelQueryUtil.getVoxelBlockBox(block.row, block.col, block.collisionLayer).center);
     for (const block of [...blocks].sort((a, b) => nearness(a) - nearness(b)))
@@ -242,14 +245,17 @@ function burst(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObje
         DollarBillUtil.drop(room, flight.pos);
 }
 
-// A browser throws the bodies it moves, its own user's player among them, as it is told of the burst (see
-// CannonBlastThrowUtil); an agent's, which the server walks, is thrown here. Either way their moves are believed for a
-// while, however far and high they go (see PlayerMotionCheckUtil).
+// A browser throws the bodies it moves, its own user's player and pets among them, as it is told of the burst (see
+// CannonBlastThrowUtil); an agent's, which the server walks, is thrown here, and so is a pet the server plays (see
+// PetPlayUtil). A player's moves are believed for a while either way, however far and high they go (see
+// PlayerMotionCheckUtil).
 function throwBody(room: Room, object: PhysicsObject, heading: number): void
 {
     const body = room.objectById[object.objectId];
-    const ctx = (body == undefined) ? undefined : ServerUserManager.getSocketUserContext(body.sourceUserID);
-    if (body == undefined || ctx == undefined)
+    if (body == undefined || PetPlayUtil.blast(room, body, CannonBlastUtil.getThrow(heading)))
+        return;
+    const ctx = ServerUserManager.getSocketUserContext(body.sourceUserID);
+    if (ctx == undefined || body.objectTypeIndex != PLAYER_TYPE_INDEX)
         return;
     PlayerMotionCheckUtil.noteBlast(ctx);
     if (ctx instanceof AgentUserContext)

@@ -31,14 +31,15 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
         this.addSquare(
             {x: offsetInUnits.x, y: offsetInUnits.y, z: offsetInUnits.z - 0.01},
             {x: 3, y: 1, z: 1}, {x: 32, y: 32, z: 32});
-        // Eye 1 (0.02 = offset to prevent z-fighting)
+        // Eye 1 (0.02 = offset to prevent z-fighting). The eyes' glow fades with the camera's distance (see
+        // instancedEmissiveShader).
         this.addSquare(
             {x: offsetInUnits.x + 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye);
+            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye, true);
         // Eye 2 (0.02 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x - 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye);
+            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye, true);
     }
 
     protected addBox(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
@@ -59,9 +60,11 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
         this.addPart(offsetInUnits, scaleInUnits, "Cylinder", INSTANCED_TIN_MATERIAL_ID, color,
             {x: 1, y: 0, z: 0});
     }
-    protected addSquare(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
+    protected addSquare(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3, dims: boolean = false)
     {
         this.addPart(offsetInUnits, scaleInUnits, "Square", INSTANCED_EMISSIVE_MATERIAL_ID, color);
+        if (dims)
+            this.parts[this.parts.length - 1].dims = true;
     }
     protected addPart(offsetInUnits: Vec3, scaleInUnits: Vec3,
         geometryId: string, materialId: string, color: Vec3, dir?: Vec3)

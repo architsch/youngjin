@@ -2,7 +2,8 @@ import * as THREE from "three";
 import GameObject from "../../../types/gameObject/gameObject";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import { cameraModeObservable, cameraShakeObservable, orbitCameraAngleHoldRequestObservable,
-    orbitCameraDistanceRangeRequestObservable, orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
+    orbitCameraDistanceRangeRequestObservable, orbitCameraViewRequestObservable,
+    playModeSelectionObservable } from "../../../../system/clientObservables";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import FirstPersonCameraPose from "./firstPersonCameraPose";
 import OrbitCameraPose from "./orbitCameraPose";
@@ -80,6 +81,9 @@ export default class PlayerCamera
     private appliedShakeOffset = new THREE.Vector3();
     private appliedShakeTurn = new THREE.Quaternion();
 
+    // What was selected in play mode at the last frame (see PlayModeSelectionUtil).
+    private selectedInPlayMode: GameObject | null = null;
+
     onSpawn(player: GameObject, pointerInput?: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
@@ -127,6 +131,11 @@ export default class PlayerCamera
             this.firstPersonPose.releaseLook();
         if (mode.type !== "orbit")
             this.orbitWorldPoseKept = false;
+        // A play-mode selection over, the gaze that went to it goes back to rest.
+        const selected = playModeSelectionObservable.peek();
+        if (this.selectedInPlayMode != null && selected == null)
+            this.firstPersonPose.endLook();
+        this.selectedInPlayMode = selected;
 
         let interpRate: number;
 

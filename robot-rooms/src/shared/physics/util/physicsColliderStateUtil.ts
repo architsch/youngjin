@@ -147,15 +147,21 @@ const PhysicsColliderStateUtil =
     },
 }
 
-// Two players pass through each other while either is a ghost (see AdminPrefsUtil.isGhost), read from the room as
-// it stands.
+// Two bodies (players, pets) pass through each other while either is a ghost (see AdminPrefsUtil.isGhost), read from
+// the room as it stands.
 function passesThrough(mover: PhysicsObject, object: PhysicsObject): boolean
 {
-    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
-    if (mover.objectTypeIndex != playerTypeIndex || object.objectTypeIndex != playerTypeIndex)
+    const room = mover.physicsRoom.room;
+    if (!isBodyType(mover.objectTypeIndex) || !isBodyType(object.objectTypeIndex))
         return false;
-    const objectById = mover.physicsRoom.room.objectById;
-    return AdminPrefsUtil.isGhost(objectById[mover.objectId]) || AdminPrefsUtil.isGhost(objectById[object.objectId]);
+    return AdminPrefsUtil.isGhost(room.objectById[mover.objectId]) || AdminPrefsUtil.isGhost(room.objectById[object.objectId]);
+}
+
+// Whether physics moves a type's objects as bodies (see PhysicsSphereUtil.isBody).
+function isBodyType(objectTypeIndex: number): boolean
+{
+    const config = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
+    return config.components.spawnedByMe?.rigidbody != undefined || config.movedAsBody == true;
 }
 
 // Laid on its face (see Geometry3DUtil.getAxisFacingBasis). The box is slightly inset on the face's own

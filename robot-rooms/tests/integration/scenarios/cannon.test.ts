@@ -66,6 +66,8 @@ import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import CannonAimUtil from "../../../src/shared/object/util/cannonAimUtil";
 import CannonBallMotionUtil from "../../../src/shared/object/util/cannonBallMotionUtil";
 import CannonBallStateUtil from "../../../src/shared/object/util/cannonBallStateUtil";
+import PetBodyUtil from "../../../src/shared/object/util/petBodyUtil";
+import PetIdentityUtil, { PET_FIXED_ENERGIES, PET_FIXED_HEALTHS } from "../../../src/shared/object/util/petIdentityUtil";
 import CannonBlastUtil from "../../../src/shared/object/util/cannonBlastUtil";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
@@ -2160,6 +2162,30 @@ describe("a cannon the server plays", () => {
         expect(CannonBallStateUtil.getObjectState(ball).vel.x).toBeLessThan(0);
         expect(statesToldTo(user, ball.objectId).map(value => CannonBallStateUtil.decode(value).exploded)).toEqual([false]);
         expect(getBills()).toEqual([]);
+    });
+
+    it("fires at someone behind a pet all the same, which hides nobody from it, and its ball strikes the pet", async () => {
+        const user = await join("someone");
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+        // A pet the room keeps, midway on the line from its barrel's mouth to their middle.
+        const middle = {x: 0.5 * (CANNON_SPOT.x + TARGET_SPOT.x), y: 0, z: TARGET_SPOT.z};
+        const identity = PetIdentityUtil.encode({name: "Rex", fixedHealthLevel: PET_FIXED_HEALTHS.length,
+            fixedEnergyLevel: PET_FIXED_ENERGIES.length, colorIndex: 0, traits: {dependence: 1, sociability: 1,
+                aggressiveness: 1, bravery: 1, curiosity: 1, zodiac: 0}});
+        expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName,
+            ObjectTypeConfigMap.getIndexByType("ServerPet"), "petAAAA1", new ObjectTransform(PetBodyUtil.getStandingPos(middle),
+                PetBodyUtil.getDir(0), {...UNIT_VEC3}), {[ObjectMetadataKeyEnumMap.PetIdentity]: new EncodableByteString(identity)}))).toBe(true);
+        const box = PhysicsManager.physicsRooms[HUB_ID].objectById["petAAAA1"].colliderState.hitbox;
+        const pivot = CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir);
+        expect(Geometry3DUtil.castSphereAgainstAABB(pivot, TARGET_SPOT, 0, box).hitNormal).toBeDefined();
+
+        flushUntil(() => getBalls().length == 1, Math.PI / CANNON_TURN_RATE + CANNON_LOCK_SECONDS + CANNON_READY_SECONDS + 2);
+        const [ball] = getBalls();
+        // It bursts on the pet, short of whoever it was fired at.
+        flushUntil(() => getRoom().objectById[ball.objectId] == undefined
+            || CannonBallStateUtil.getObjectState(getRoom().objectById[ball.objectId]).exploded, 3);
+        expect(Math.hypot(ball.transform.pos.x - middle.x, ball.transform.pos.z - middle.z)).toBeLessThan(1.5);
+        forget(user);
     });
 
     it.each([["another cannon", {on: false}], ["scrap", {phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0}]] as const)(

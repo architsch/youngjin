@@ -163,5 +163,30 @@ drop</code></pre></div>
     }
 })();
 </script>
+<script>
+(function () {
+    if (window.parent === window || window.name !== "robotRoomsWebPage")
+        return;
+    var game = new URL("https://app.thingspool.net").origin;
+    var site = [location.origin, new URL("https://thingspool.net").origin];
+    // A local server is both (see robot-rooms' EJSUtil.postProcessHTML): there, the game is what has no file extension.
+    var shared = site.indexOf(game) >= 0;
+    document.addEventListener("click", function (event) {
+        var link = (event.target instanceof Element) ? event.target.closest("a[href]") : null;
+        if (!link)
+            return;
+        var url = new URL(link.href, location.href);
+        if (url.protocol !== "http:" && url.protocol !== "https:")
+            return;
+        if (url.origin === game && !(shared && /\.[a-z0-9]+$/i.test(url.pathname)))
+            window.parent.postMessage({kind: "robotRooms:backToGame"}, "*");
+        else if (site.indexOf(url.origin) < 0)
+            window.parent.postMessage({kind: "robotRooms:outsideLink", href: url.href}, "*");
+        else
+            return;
+        event.preventDefault();
+    }, true);
+})();
+</script>
 </body>
 </html>

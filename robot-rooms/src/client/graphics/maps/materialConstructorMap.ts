@@ -22,6 +22,7 @@ import installInstancedTinShader, { applyInstancedTinMaterialProperties }
     from "../shaders/instancedTinShader";
 import installInstancedWoodShader, { applyInstancedWoodMaterialProperties }
     from "../shaders/instancedWoodShader";
+import installInstancedEmissiveShader from "../shaders/instancedEmissiveShader";
 import installMirrorShader from "../shaders/mirrorShader";
 import MirrorMaterialUtil from "../util/mirrorMaterialUtil";
 
@@ -159,8 +160,8 @@ function createInstancedColorMaterial(p: InstancedColorMaterialParams): THREE.Ma
     return newMaterial;
 }
 
-// Unlit, full-strength instance color for light emitters. Not lamp-lit, or it would brighten in its
-// own glow.
+// Unlit, full-strength instance color for light emitters, or what an instance draws in it (see
+// instancedEmissiveShader). Not lamp-lit, or it would brighten in its own glow.
 function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): THREE.Material
 {
     const newMaterial = new THREE.MeshBasicMaterial();
@@ -170,7 +171,7 @@ function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): TH
     newMaterial.polygonOffset = true;
     newMaterial.polygonOffsetFactor = -2;
     newMaterial.polygonOffsetUnits = -2;
-    newMaterial.onBeforeCompile = installInstanceColorShader;
+    newMaterial.onBeforeCompile = installInstancedEmissiveShader;
     return newMaterial;
 }
 

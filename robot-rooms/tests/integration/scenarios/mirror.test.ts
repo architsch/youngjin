@@ -815,6 +815,8 @@ describe("what a reflection shows that the camera doesn't", () => {
             },
             updateInstanceColor: () => {},
             updateInstanceMouldingParams: () => {},
+            updateInstanceRust: () => {},
+            updateInstanceGlyph: () => {},
         };
         const gameObject = {
             params: new AddObjectSignal("room", "user", "User", fanTypeIndex, "fan",

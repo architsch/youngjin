@@ -34,11 +34,12 @@ const DEFAULT_WIDTH_IN_CHARS = 18;
 const LINK_BUTTON_EXTRA_CHARS = 4;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 // What a speaker shows in place of its words (see SpeakerActivityUtil.replacesWords): editing in the mode switch's green
-// for Edit (Tailwind's green-300), reading (away from the game) as offline in a medium gray (its gray-400), and how long
-// their dots take to come.
+// for Edit (Tailwind's green-300), reading a page over the game in a pale sky blue (its sky-300), away behind another tab
+// as offline in a medium gray (its gray-400), and how long their dots take to come.
 const ACTIVITY_LINES: {[activity: SpeakerActivity]: {word: string, color: string}} = {
     [SpeakerActivityEnumMap.Editing]: {word: "Editing", color: "oklch(87.1% 0.15 154.449)"},
-    [SpeakerActivityEnumMap.Reading]: {word: "Offline", color: "oklch(70.7% 0.022 261.325)"},
+    [SpeakerActivityEnumMap.Reading]: {word: "Reading", color: "oklch(82.8% 0.111 230.318)"},
+    [SpeakerActivityEnumMap.Away]: {word: "Offline", color: "oklch(70.7% 0.022 261.325)"},
 };
 const ACTIVITY_DOTS_CYCLE_MS = 1200;
 // The dots by a typist's name: how long each takes to swell and shrink, and how far behind the one before it.
@@ -67,8 +68,15 @@ export default class SpeechBubble extends GameObjectComponent
     // What it was last given to say, which a redrawn bubble shows again (see refresh). The user's own words are never
     // written back to their player in a multiplayer room.
     private message: string = "";
-    // Until when a helper is shown thinking before the server says so (see expectThinking).
+    // Until when a helper or a pet is shown thinking before the server says so (see expectThinking).
     private thinkingExpectedUntil: number = 0;
+    // The color its words show in, if not the bubble's own (see setWordsColor).
+    private wordsColor: string | undefined = undefined;
+    // Words and a button of this browser's own, which take the place of what the speaker says until a time (see
+    // showNotice).
+    private notice: {text: string, buttonLabel: string, onClick: () => void, until: number} | undefined = undefined;
+    // What a click on the bubble itself does, if anything (see setOnClick).
+    private onBubbleClick: (() => void) | undefined = undefined;
 
     // How far the bubble is lowered to keep its top in view, and moved sideways to keep its sides in view.
     private lowered: number = 0;
@@ -105,6 +113,11 @@ export default class SpeechBubble extends GameObjectComponent
         if (this.thinkingExpectedUntil > 0 && performance.now() >= this.thinkingExpectedUntil)
         {
             this.thinkingExpectedUntil = 0;
+            this.refresh();
+        }
+        if (this.notice != undefined && performance.now() >= this.notice.until)
+        {
+            this.notice = undefined;
             this.refresh();
         }
 
@@ -176,7 +189,7 @@ export default class SpeechBubble extends GameObjectComponent
         }
     }
 
-    // A helper shown thinking at once, for the user's line it is about to hear, until the server's word comes.
+    // A helper or a pet shown thinking at once, for the user's line it is about to hear, until the server's word comes.
     expectThinking(): void
     {
         this.thinkingExpectedUntil = performance.now() + EXPECTED_THINKING_MS;
@@ -188,6 +201,32 @@ export default class SpeechBubble extends GameObjectComponent
     refresh(): void
     {
         this.displayMessage(this.message, false);
+    }
+
+    // Shows words, and a button after them, over the speaker for a while, in the place of whatever it says meanwhile: this
+    // browser's own, which nobody else sees (a pet asking the guest who generated it to sign in; see PetGenerationUtil).
+    showNotice(text: string, buttonLabel: string, onClick: () => void, milliseconds: number): void
+    {
+        this.notice = {text, buttonLabel, onClick, until: performance.now() + milliseconds};
+        this.displayMessage(this.message, true);
+    }
+
+    // The color the speaker's words show in from now on, their name aside (a pet's, by what it speaks of; see
+    // PetGameObject); undefined for the bubble's own.
+    setWordsColor(color: string | undefined): void
+    {
+        if (color == this.wordsColor)
+            return;
+        this.wordsColor = color;
+        this.refresh();
+    }
+
+    // What a click on the bubble does from now on, besides its links' own (a pet asking for help is selected by it; see
+    // PetGameObject); undefined for nothing, the bubble letting clicks through to the room.
+    setOnClick(onClick: (() => void) | undefined): void
+    {
+        this.onBubbleClick = onClick;
+        this.applyClickable();
     }
 
     // A long message from a speaker close by would rise past the top of the view: it is lowered over the speaker instead,
@@ -233,8 +272,9 @@ export default class SpeechBubble extends GameObjectComponent
         this.message = message;
         const prepend = this.componentConfig.prependUserNameToMessage;
         const activity = SpeakerActivityUtil.get(this.gameObject.params);
-        const busyElsewhere = SpeakerActivityUtil.replacesWords(activity);
-        const saying = !busyElsewhere && message.length > 0;
+        const notice = this.notice;
+        const busyElsewhere = notice == undefined && SpeakerActivityUtil.replacesWords(activity);
+        const saying = notice != undefined || (!busyElsewhere && message.length > 0);
 
         if (!prepend && !busyElsewhere && !saying)
         {
@@ -242,7 +282,10 @@ export default class SpeechBubble extends GameObjectComponent
             return;
         }
 
-        const segments = saying ? MessageLinkUtil.parse(message) : [];
+        // (A notice's button is as wide as a link of its label.)
+        const segments: MessageSegment[] = (notice != undefined)
+            ? [{kind: "text", text: `${notice.text} `}, {kind: "link", href: "", label: notice.buttonLabel}]
+            : saying ? MessageLinkUtil.parse(message) : [];
         this.showSpeechBubble();
         this.bubbleElement!.replaceChildren();
         this.bubbleElement!.style.maxWidth = this.getMaxWidth(segments);
@@ -253,7 +296,7 @@ export default class SpeechBubble extends GameObjectComponent
             const userNameSpan = document.createElement("span");
             userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
             userNameSpan.textContent = userName + (saying ? ":" : "");
-            // Someone writing a line, or a helper thinking of an answer, its last words still up.
+            // Someone writing a line, or a helper or a pet thinking of an answer, its last words still up.
             if (activity == SpeakerActivityEnumMap.Typing || performance.now() < this.thinkingExpectedUntil)
                 userNameSpan.appendChild(createTypingDots());
             this.bubbleElement!.appendChild(userNameSpan);
@@ -264,11 +307,19 @@ export default class SpeechBubble extends GameObjectComponent
 
         if (busyElsewhere)
             this.bubbleElement!.appendChild(createActivityLine(ACTIVITY_LINES[activity]));
+        let words: HTMLElement = this.bubbleElement!;
+        if (this.wordsColor != undefined && segments.length > 0)
+        {
+            words = document.createElement("span");
+            words.style.color = this.wordsColor;
+            this.bubbleElement!.appendChild(words);
+        }
         for (const segment of segments)
         {
-            this.bubbleElement!.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
-                : (segment.kind == "link") ? createLinkButton(segment.href, segment.label)
-                : ScreenControlPictureUtil.create(segment.control));
+            words.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
+                : (segment.kind == "control") ? ScreenControlPictureUtil.create(segment.control)
+                : (notice != undefined) ? createNoticeButton(segment.label, notice.onClick)
+                : createLinkButton(segment.href, segment.label));
         }
 
         if (animate && saying)
@@ -333,6 +384,8 @@ export default class SpeechBubble extends GameObjectComponent
             this.bubbleElement.style = `position:relative; margin:auto auto; box-sizing:content-box; padding:0.2rem ${PADDING_X_REM}rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
             this.lowered = 0;
             this.shifted = 0;
+            OverlayClickTargetUtil.makeClickable(this.bubbleElement, () => this.onBubbleClick?.());
+            this.applyClickable();
             this.textElement.appendChild(this.bubbleElement);
 
             this.textCSS2DObject = new CSS2DObject(this.textElement);
@@ -340,6 +393,15 @@ export default class SpeechBubble extends GameObjectComponent
             this.textCSS2DObject.center.set(0.5, 1);
             this.textCSS2DObject.position.set(0, 0, 0);
         }
+    }
+
+    // Only a bubble that does something when clicked takes the pointer.
+    private applyClickable(): void
+    {
+        if (this.bubbleElement == undefined)
+            return;
+        this.bubbleElement.style.pointerEvents = (this.onBubbleClick != undefined) ? "auto" : "";
+        this.bubbleElement.style.cursor = (this.onBubbleClick != undefined) ? "pointer" : "";
     }
 
     private hideSpeechBubble(): void
@@ -364,6 +426,16 @@ function createLinkButton(href: string, label: string): HTMLElement
     button.title = href;
     button.append(label, createLinkIcon());
     OverlayClickTargetUtil.makeClickable(button, () => MessageLinkOpenUtil.open(href));
+    return button;
+}
+
+// A notice's button (see SpeechBubble.showNotice), which looks as a link's does, without its arrow.
+function createNoticeButton(label: string, onClick: () => void): HTMLElement
+{
+    const button = document.createElement("span");
+    button.className = "speechBubbleNoticeButton yj-link-button";
+    button.append(label);
+    OverlayClickTargetUtil.makeClickable(button, onClick);
     return button;
 }
 

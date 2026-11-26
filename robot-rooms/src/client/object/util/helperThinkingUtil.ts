@@ -5,13 +5,14 @@ import NpcGameObject from "../types/gameObject/npcGameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import HelperBehaviorUtil from "../../../shared/object/util/helperBehaviorUtil";
+import PetListenerUtil from "../../../shared/object/util/petListenerUtil";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 
-// A helper shown thinking before the server says so: in a multiplayer room, the one the server will have hear a line the
-// user has just said, by the same rule (see HelperBehaviorUtil.pickListener), is shown thinking at once rather than a
-// round trip later. A single-player room's helpers are the browser's own, and show it as they hear.
+// A helper, or a pet, shown thinking before the server says so: in a multiplayer room, the one the server will have hear
+// a line the user has just said, by the same rule (see HelperBehaviorUtil.pickListener), is shown thinking at once rather
+// than a round trip later. A single-player room's helpers are the browser's own, and show it as they hear.
 const HelperThinkingUtil =
 {
     expectAnswerTo: (text: string): void =>
@@ -34,11 +35,13 @@ const HelperThinkingUtil =
             });
         // A player's transform points behind it, so it faces the other way (see PlayerController).
         const facing = me.direction.negate();
-        const listener = HelperBehaviorUtil.pickListener(helpers, text,
-            {x: me.position.x, y: me.position.y, z: me.position.z}, {x: facing.x, y: facing.y, z: facing.z});
-        if (listener == undefined)
+        const speaker = {x: me.position.x, y: me.position.y, z: me.position.z};
+        const {helper, pet} = HelperBehaviorUtil.pickListener(helpers, text, speaker,
+            {x: facing.x, y: facing.y, z: facing.z}, PetListenerUtil.find(room, text, speaker));
+        const listenerId = helper?.objectId ?? pet?.objectId;
+        if (listenerId == undefined)
             return;
-        (ClientObjectManager.getObjectById(listener.objectId)?.components.speechBubble as SpeechBubble | undefined)
+        (ClientObjectManager.getObjectById(listenerId)?.components.speechBubble as SpeechBubble | undefined)
             ?.expectThinking();
     },
 }

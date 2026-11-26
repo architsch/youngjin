@@ -12,3 +12,6 @@ import "../types/objectTypeClientConfig/mirrorObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/dollarBillObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/cannonObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/cannonBallObjectTypeClientConfig.ts";
+import "../types/objectTypeClientConfig/petObjectTypeClientConfig.ts";
+import "../types/objectTypeClientConfig/serverPetObjectTypeClientConfig.ts";
+import "../types/objectTypeClientConfig/petScrapObjectTypeClientConfig.ts";

@@ -4,9 +4,13 @@ import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import App from "../../app";
+import { PetActionEnumMap } from "../../../shared/object/types/petAction";
+import { PetInjectionEnumMap } from "../../../shared/object/types/petInjection";
+import PetOwnerUtil from "../../../shared/object/util/petOwnerUtil";
+import PetShownStateUtil from "../../../shared/object/util/petShownStateUtil";
 import { cannonBallBounceObservable, cannonBallBurstObservable, cannonFiredObservable, cannonScrappedObservable,
     dollarsSpentObservable, inventoryGainObservable, loginRewardStageObservable, objectCollectedObservable,
-    objectEditObservable, roomTravelObservable } from "../../system/clientObservables";
+    objectEditObservable, petInjectedObservable, petStrikeObservable, roomTravelObservable } from "../../system/clientObservables";
 import AudioManager from "../audioManager";
 import AudioBundleMap from "../maps/audioBundleMap";
 
@@ -16,10 +20,12 @@ export const PUFF_SOUND_RANGE = 14;
 export const ARRIVAL_SOUND_RANGE = 14;
 export const COLLECT_SOUND_RANGE = 12;
 export const CANNON_SOUND_RANGE = 40;
+// How far what happens to a pet carries: its going, what is put into it, and its ramming another.
+export const PET_SOUND_RANGE = 14;
 // How loud a cannon's shot, its ball's bounce and its ball's burst are, over their recordings' own loudness.
-export const CANNON_FIRE_VOLUME = 1.4;
-export const CANNON_BOUNCE_VOLUME = 1;
-export const CANNON_EXPLOSION_VOLUME = 1.6;
+export const CANNON_FIRE_VOLUME = 2.4;
+export const CANNON_BOUNCE_VOLUME = 1.2;
+export const CANNON_EXPLOSION_VOLUME = 2;
 // How far either way the pitch of a sound heard over and over is varied, so that no two of them sound alike.
 export const PITCH_VARIATION = 0.05;
 // How long the moment lasts whose sounds are heard as one (see tell).
@@ -34,12 +40,13 @@ let arrivalTimer: ReturnType<typeof setTimeout> | undefined;
 // Which event sounds as what: the one place gameplay and the UI meet sound, so neither calls AudioManager itself. The
 // UI, chat and building make none, whoever builds. What others do sounds where they do it (an object's own, a fan's wind
 // or a cannon's gears, sounds where it stands; see FanGameObject, CannonGameObject), as do others coming and going and
-// collecting, and what cannons do; what the user does and is given is heard alike from anywhere.
+// collecting, what cannons do, and what befalls pets; what the user does and is given is heard alike from anywhere.
 const AudioTriggerUtil =
 {
     // Players come and go through doors; the user's own coming and going sounds as they travel (see onRoomTravel), and an
-    // admin's in ghost mode not at all. None of the room's own objects sounds as it is put up, taken away, moved or
-    // changed.
+    // admin's in ghost mode not at all. A pet taken away is beamed out, or, out of health, breaks down: several going
+    // at once, with their owner, sound as one. None of the room's own objects sounds as it is put up, taken away, moved
+    // or changed.
     onObjectEdit: (edit: {kind: "add" | "remove" | "change", object: AddObjectSignal, own: boolean}): void =>
     {
         const {kind, object} = edit;
@@ -49,6 +56,21 @@ const AudioTriggerUtil =
             AudioManager.playAt((kind == "add") ? "room/arrive" : "room/leave", object.transform.pos,
                 {volume: 0.6, range: ARRIVAL_SOUND_RANGE});
         }
+        else if (kind == "remove" && PetOwnerUtil.isPet(object))
+        {
+            const dead = PetShownStateUtil.getObjectState(object).action == PetActionEnumMap.Dead;
+            tell(() => AudioManager.playAt(dead ? "pet/death" : "pet/vanish", object.transform.pos,
+                {volume: 0.7, range: PET_SOUND_RANGE}));
+        }
+    },
+    onPetInjected: (given: {injection: number, position: Vec3}): void =>
+    {
+        AudioManager.playAt((given.injection == PetInjectionEnumMap.Battery) ? "pet/charge" : "pet/repair", given.position,
+            {volume: 0.8, range: PET_SOUND_RANGE});
+    },
+    onPetStrike: (strike: {position: Vec3}): void =>
+    {
+        AudioManager.playAt("pet/strike", strike.position, {volume: 0.8, range: PET_SOUND_RANGE, rate: vary()});
     },
     // Heard from its middle, as a puff.
     onCannonScrapped: (wreck: {position: Vec3}): void =>
@@ -166,6 +188,8 @@ cannonFiredObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCanno
 cannonScrappedObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonScrapped));
 cannonBallBounceObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonBallBounce));
 cannonBallBurstObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonBallBurst));
+petInjectedObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onPetInjected));
+petStrikeObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onPetStrike));
 inventoryGainObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onInventoryGain));
 loginRewardStageObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onLoginRewardStage));
 dollarsSpentObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onDollarsSpent));

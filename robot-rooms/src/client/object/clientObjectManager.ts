@@ -14,12 +14,13 @@ import ObjectCollectedSignal from "../../shared/object/types/objectCollectedSign
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
 import NpcGameObject from "./types/gameObject/npcGameObject";
-import { nearbyObjectSelectorObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable }
-    from "../system/clientObservables";
+import { chatLineObservable, nearbyObjectSelectorObservable, objectEditObservable, objectPlacedObservable,
+    objectSelectionObservable, playModeSelectionObservable } from "../system/clientObservables";
 import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
+import { ObjectMetadata } from "../../shared/object/types/objectMetadata";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
@@ -34,9 +35,9 @@ const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
-// What a helper shows of what it is doing as whoever plays it sets it, which is no edit of the room.
+// What a helper or a pet shows of what it is doing as whoever plays it sets it, which is no edit of the room.
 const LIVE_METADATA_KEYS: ObjectMetadataKey[] = [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Facing,
-    ObjectMetadataKeyEnumMap.Activity];
+    ObjectMetadataKeyEnumMap.Activity, ObjectMetadataKeyEnumMap.PetState, ObjectMetadataKeyEnumMap.PetNeeds];
 
 // Voxel objects are spawned once (autoUnload=false) and persist for the app's lifetime.
 let voxelsSpawned = false;
@@ -213,6 +214,18 @@ const ClientObjectManager =
             return false;
         }
     },
+    // Makes an object of the user's own, under an id the server is to know it by (see
+    // ObjectFactory.createClientSideObject), and adds it as an edit of theirs: the object, unless the room refused it.
+    addOwnObject: async (objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata,
+        objectId: string): Promise<GameObject | undefined> =>
+    {
+        const object = ObjectFactory.createClientSideObject(App.getCurrentRoom()!.id, objectTypeIndex, transform,
+            metadata, objectId);
+        if (await ClientObjectManager.addObject(object))
+            return object;
+        void object.onDespawn();
+        return undefined;
+    },
     removeObject: async (objectId: string, validate: boolean = true,
         removeFromRoomData: boolean = true): Promise<boolean> =>
     {
@@ -230,6 +243,9 @@ const ClientObjectManager =
                 delete updatableGameObjects[object.params.objectId];
             if (object.params.objectTypeIndex === playerTypeIndex)
                 delete playerByUserID[object.params.sourceUserID];
+            // (A selection in play mode ends with its object; see PlayModeSelectionUtil.)
+            if (playModeSelectionObservable.peek() === object)
+                playModeSelectionObservable.set(null);
             await object.onDespawn(); // Asynchronous despawning process must be called AFTER unregistering the object, since the per-frame update call may still unexpectedly access the object while it is being partially torn down.
             if (validate)
                 objectEditObservable.set({kind: "remove", object: object.params, own: true});
@@ -381,6 +397,8 @@ const ClientObjectManager =
             announcePlacement(signal.objectId);
         else
             announceChange(signal.objectId, signal.metadataKey, signal.metadataValue);
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
+            announceLine(signal.objectId, signal.metadataValue);
     },
     // Gone by now, it has nowhere to go.
     onSetObjectPathSignalReceived: async (signal: SetObjectPathSignal) => {
@@ -405,6 +423,14 @@ function announcePlacement(objectId: string): void
         objectPlacedObservable.set({object: obj, own: false});
 }
 
+// A line someone else's player has just said (the user's own is told as they send it; see Chat).
+function announceLine(objectId: string, text: string): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj != undefined && obj.objectTypeIndex == playerTypeIndex && text.length > 0)
+        chatLineObservable.set({userID: obj.sourceUserID, text});
+}
+
 // Someone else's change to the settings of one of the room's own objects, which what a helper shows of what it is doing
 // (see LIVE_METADATA_KEYS) is none of, nor what the server tells of a cannon it plays.
 function announceChange(objectId: string, key: ObjectMetadataKey, value: string): void
@@ -419,9 +445,12 @@ function announceChange(objectId: string, key: ObjectMetadataKey, value: string)
 
 // Whether a value is the server's word of a cannon as it plays it, or of its ball: of that key a user sets the switch
 // alone, which is the one setting any tool shows (see CannonStateUtil.merge). Its word that a cannon is scrap is no
-// such word: that changes the room's own object, and takes the switch from its tools.
+// such word: that changes the room's own object, and takes the switch from its tools. What a pet shows of itself as it
+// is played is no setting either, nor how a user's pets are.
 function isPlayedState(objectId: string, key: ObjectMetadataKey, value: string): boolean
 {
+    if (key == ObjectMetadataKeyEnumMap.PetState || key == ObjectMetadataKeyEnumMap.Pets)
+        return true;
     if (key != ObjectMetadataKeyEnumMap.CannonState || CannonStateUtil.isSwitch(value))
         return false;
     return App.getCurrentRoom()?.objectById[objectId]?.objectTypeIndex != cannonTypeIndex

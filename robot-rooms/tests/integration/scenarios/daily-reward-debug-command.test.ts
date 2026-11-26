@@ -31,7 +31,7 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 const COMMAND = "fast_forward_daily_reward_clock";
 const SIGNAL = "fastForwardDailyRewardClock";
 
-const userOfType = (userType: number) => new User("someone", "someone", userType, "");
+const userOfType = (userType: number) => new User("someone", "someone", userType, "", "");
 // The connection a command comes in on, as far as this one reads it.
 const contextOf = (user: User) => ({user}) as unknown as UserContext;
 

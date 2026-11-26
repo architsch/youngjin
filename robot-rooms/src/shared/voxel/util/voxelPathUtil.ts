@@ -2,21 +2,24 @@ import Vec3 from "../../math/types/vec3";
 import Voxel from "../types/voxel";
 import VoxelReach from "../types/voxelReach";
 import VoxelVertex from "../types/voxelVertex";
+import VoxelWalker from "../types/voxelWalker";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../system/sharedConstants";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../object/types/objectTypeConfig/playerObjectTypeConfig";
 
-// Walking paths for a player's body over the voxel grid, by A* to one place, or by Dijkstra to everywhere near at once
-// (see findReach). A path runs between grid vertices: a body narrower than two voxels, standing on one, covers exactly
-// the four voxels around it, so it passes wherever a person could, through a corridor two voxels wide. Only blocks
-// count, and what else a caller's `isOpen` keeps a body off (objects as solid as blocks, see ObjectObstacleUtil); other
-// objects on the way are left to the physics.
+// Walking paths for a body over the voxel grid, by A* to one place, or by Dijkstra to everywhere near at once (see
+// findReach): a player's, unless told of another walker (a pet, which is lower and climbs higher). A path runs between
+// grid vertices: a body narrower than two voxels, standing on one, covers exactly the four voxels around it, so it
+// passes wherever a person could, through a corridor two voxels wide. Only blocks count, and what else a caller's
+// `isOpen` keeps a body off (objects as solid as blocks, see ObjectObstacleUtil); other objects on the way are left to
+// the physics.
 
 if (PLAYER_RADIUS_XZ >= VOXEL_CELL_SIZE)
     throw new Error("VoxelPathUtil assumes a player narrower than two voxels");
 
 export const BODY_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
-// One layer is the most a walking body climbs (see ColliderConfig.maxClimbableHeight); a fall can be deeper.
+// One layer is the most a walking player climbs (see ColliderConfig.maxClimbableHeight); a fall can be deeper.
+export const PLAYER_WALKER: VoxelWalker = {bodyLayers: BODY_LAYERS, climbLayers: 1};
 export const MAX_DROP_LAYERS = 8;
 // Bounds a search in a room with no way through, which would otherwise visit every vertex.
 const MAX_EXPANSIONS = 40_000;
@@ -24,6 +27,9 @@ const NUM_VERTEX_ROWS = NUM_VOXEL_ROWS + 1;
 const NUM_VERTEX_COLS = NUM_VOXEL_COLS + 1;
 // How far a world point may be off a vertex and still be on it.
 const ON_VERTEX = 1e-6;
+// How finely a straight walk is looked along (see canWalkStraight): a vertex whose square the line crosses for less than
+// this may go unseen.
+const STRAIGHT_WALK_STEP = VOXEL_CELL_SIZE / 8;
 
 const DIRECTIONS: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
 const ANYWHERE = (): boolean => true;
@@ -32,9 +38,9 @@ const VoxelPathUtil =
 {
     // Whether a body can stand on the vertex: the four voxels around it clear for its whole height, and a block
     // (or the room's floor) under at least one of them.
-    isStandable: (voxels: Voxel[], vertex: VoxelVertex): boolean =>
+    isStandable: (voxels: Voxel[], vertex: VoxelVertex, walker: VoxelWalker = PLAYER_WALKER): boolean =>
     {
-        return isClear(voxels, vertex.row, vertex.col, vertex.layer, vertex.layer + BODY_LAYERS - 1)
+        return isClear(voxels, vertex.row, vertex.col, vertex.layer, vertex.layer + walker.bodyLayers - 1)
             && isSupported(voxels, vertex.row, vertex.col, vertex.layer);
     },
     // Where a body stands on the vertex, its feet on the layer's bottom.
@@ -59,7 +65,7 @@ const VoxelPathUtil =
     },
     // The standable, open vertex nearest a body's feet, searched out to maxRadius vertices and layers; undefined if none.
     findStandingVertexNear: (voxels: Voxel[], feet: Vec3, maxRadius: number = 3,
-        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelVertex | undefined =>
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE, walker: VoxelWalker = PLAYER_WALKER): VoxelVertex | undefined =>
     {
         const row = Math.round(feet.z / VOXEL_CELL_SIZE);
         const col = Math.round(feet.x / VOXEL_CELL_SIZE);
@@ -74,7 +80,7 @@ const VoxelPathUtil =
                 {
                     const vertex = {row: row + dr, col: col + dc, layer: layer + dl};
                     const distance = dr * dr + dc * dc + dl * dl;
-                    if (distance < bestDistance && VoxelPathUtil.isStandable(voxels, vertex) && isOpen(vertex))
+                    if (distance < bestDistance && VoxelPathUtil.isStandable(voxels, vertex, walker) && isOpen(vertex))
                     {
                         best = vertex;
                         bestDistance = distance;
@@ -84,13 +90,36 @@ const VoxelPathUtil =
         }
         return best;
     },
+    // Whether a body walks straight from one point to another across a layer's floor, neither climbing nor dropping:
+    // the vertex nearest each point of the line is standable and open on that layer.
+    canWalkStraight: (voxels: Voxel[], from: Vec3, to: Vec3, layer: number,
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE, walker: VoxelWalker = PLAYER_WALKER): boolean =>
+    {
+        const numSteps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / STRAIGHT_WALK_STEP);
+        let last: VoxelVertex | undefined = undefined;
+        for (let i = 0; i <= numSteps; ++i)
+        {
+            const share = (numSteps == 0) ? 0 : i / numSteps;
+            const vertex = {row: Math.round((from.z + (to.z - from.z) * share) / VOXEL_CELL_SIZE),
+                col: Math.round((from.x + (to.x - from.x) * share) / VOXEL_CELL_SIZE), layer};
+            if (vertex.row == last?.row && vertex.col == last.col)
+                continue;
+            last = vertex;
+            if (!VoxelPathUtil.isStandable(voxels, vertex, walker) || !isOpen(vertex))
+                return false;
+        }
+        return true;
+    },
     // The vertices from start to goal, both included, with straight runs reduced to their ends, over open vertices
     // (start aside); undefined if the goal can't be reached (or not within the search's bound).
     findPath: (voxels: Voxel[], start: VoxelVertex, goal: VoxelVertex,
-        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelVertex[] | undefined =>
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE, walker: VoxelWalker = PLAYER_WALKER): VoxelVertex[] | undefined =>
     {
-        if (!VoxelPathUtil.isStandable(voxels, start) || !VoxelPathUtil.isStandable(voxels, goal) || !isOpen(goal))
+        if (!VoxelPathUtil.isStandable(voxels, start, walker) || !VoxelPathUtil.isStandable(voxels, goal, walker)
+            || !isOpen(goal))
+        {
             return undefined;
+        }
 
         const startKey = toKey(start);
         const goalKey = toKey(goal);
@@ -110,7 +139,7 @@ const VoxelPathUtil =
             const currentCost = costSoFar.get(currentKey)!;
             for (const [dr, dc] of DIRECTIONS)
             {
-                const next = findStep(voxels, current, dr, dc, isOpen);
+                const next = findStep(voxels, current, dr, dc, isOpen, walker);
                 if (next == undefined)
                     continue;
 
@@ -131,7 +160,7 @@ const VoxelPathUtil =
     // finds the way to each of them (see getPathWithin), so a walker picking where to go picks only where it can get to.
     findReach: (voxels: Voxel[], start: VoxelVertex, maxDistance: number,
         passes: (vertex: VoxelVertex) => boolean = ANYWHERE,
-        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelReach =>
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE, walker: VoxelWalker = PLAYER_WALKER): VoxelReach =>
     {
         const maxCost = maxDistance / VOXEL_CELL_SIZE;
         const startKey = toKey(start);
@@ -152,7 +181,7 @@ const VoxelPathUtil =
             vertices.push(current);
             for (const [dr, dc] of DIRECTIONS)
             {
-                const next = findStep(voxels, current, dr, dc, isOpen);
+                const next = findStep(voxels, current, dr, dc, isOpen, walker);
                 if (next == undefined || !passes(next))
                     continue;
 
@@ -185,30 +214,36 @@ function getStepCost(from: VoxelVertex, to: VoxelVertex, dr: number, dc: number)
     return ((dr != 0 && dc != 0) ? Math.SQRT2 : 1) + (to.layer > from.layer ? 0.5 : 0.25 * (from.layer - to.layer));
 }
 
-// Where a step from the vertex in a direction lands: on the same layer, else one up, else the highest of a few
-// below (a fall), if that is open. A diagonal step also needs both vertices beside it clear and open, so no corner is
-// cut.
+// Where a step from the vertex in a direction lands: on the same layer, else as few layers up as the walker climbs,
+// else the highest of a few below (a fall), if that is open. A diagonal step also needs both vertices beside it clear
+// and open, so no corner is cut.
 function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number,
-    isOpen: (vertex: VoxelVertex) => boolean): VoxelVertex | undefined
+    isOpen: (vertex: VoxelVertex) => boolean, walker: VoxelWalker): VoxelVertex | undefined
 {
     const row = from.row + dr;
     const col = from.col + dc;
     if (row < 1 || row >= NUM_VERTEX_ROWS - 1 || col < 1 || col >= NUM_VERTEX_COLS - 1)
         return undefined;
 
+    const {bodyLayers, climbLayers} = walker;
     let layer: number | undefined = undefined;
-    if (VoxelPathUtil.isStandable(voxels, {row, col, layer: from.layer}))
+    if (VoxelPathUtil.isStandable(voxels, {row, col, layer: from.layer}, walker))
         layer = from.layer;
-    // Climbing needs the head room above where the body is.
-    else if (VoxelPathUtil.isStandable(voxels, {row, col, layer: from.layer + 1})
-        && isClear(voxels, from.row, from.col, from.layer + BODY_LAYERS, from.layer + BODY_LAYERS))
-        layer = from.layer + 1;
-    else
+    for (let up = 1; layer == undefined && up <= climbLayers; ++up)
+    {
+        // Climbing needs the head room above where the body is.
+        if (VoxelPathUtil.isStandable(voxels, {row, col, layer: from.layer + up}, walker)
+            && isClear(voxels, from.row, from.col, from.layer + bodyLayers, from.layer + bodyLayers + up - 1))
+        {
+            layer = from.layer + up;
+        }
+    }
+    if (layer == undefined)
     {
         for (let below = from.layer - 1; below >= Math.max(0, from.layer - MAX_DROP_LAYERS); --below)
         {
             // The body passes down through everything over where it lands.
-            if (!isClear(voxels, row, col, below, from.layer + BODY_LAYERS - 1))
+            if (!isClear(voxels, row, col, below, from.layer + bodyLayers - 1))
                 break;
             if (isSupported(voxels, row, col, below))
             {
@@ -223,7 +258,7 @@ function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number,
     if (dr != 0 && dc != 0)
     {
         const low = Math.min(from.layer, layer);
-        const high = Math.max(from.layer, layer) + BODY_LAYERS - 1;
+        const high = Math.max(from.layer, layer) + bodyLayers - 1;
         if (!isClear(voxels, from.row + dr, from.col, low, high) || !isClear(voxels, from.row, from.col + dc, low, high))
             return undefined;
         for (const beside of [{row: from.row + dr, col: from.col}, {row: from.row, col: from.col + dc}])

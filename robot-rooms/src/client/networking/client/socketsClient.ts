@@ -6,6 +6,9 @@ import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal"
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SetObjectPathSignal from "../../../shared/object/types/setObjectPathSignal";
 import ObjectCollectedSignal from "../../../shared/object/types/objectCollectedSignal";
+import InjectPetSignal from "../../../shared/object/types/injectPetSignal";
+import PetChatSignal from "../../../shared/object/types/petChatSignal";
+import PetDriverUtil from "../../object/util/petDriverUtil";
 import InventorySignal from "../../../shared/inventory/types/inventorySignal";
 import LoginRewardSignal from "../../../shared/inventory/types/loginRewardSignal";
 import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
@@ -66,6 +69,10 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientObjectManager.onSetObjectPathSignalReceived(data as SetObjectPathSignal),
     "objectCollectedSignal": (data: EncodableData) =>
         ClientObjectManager.onObjectCollectedSignalReceived(data as ObjectCollectedSignal),
+    "injectPetSignal": (data: EncodableData) =>
+        PetDriverUtil.onInjectPetSignalReceived(data as InjectPetSignal),
+    "petChatSignal": (data: EncodableData) =>
+        PetDriverUtil.onPetChatSignalReceived(data as PetChatSignal),
     "inventorySignal": (data: EncodableData) =>
         ClientInventoryManager.onInventorySignalReceived(data as InventorySignal),
     "loginRewardSignal": (data: EncodableData) =>
@@ -215,6 +222,8 @@ const SocketsClient =
         }
         if (!tryStartClientProcess("roomChange", 1, 1))
             return false;
+        // What the user's row keeps of their pets is what the server holds as they leave (see PetDriverUtil).
+        PetDriverUtil.tellHowPetsAre();
         emitWhenReady("requestRoomChangeSignal", params);
         return true;
     },
@@ -245,6 +254,14 @@ const SocketsClient =
     emitSetObjectMetadataSignal: (params: SetObjectMetadataSignal) =>
     {
         emitWhenReady("setObjectMetadataSignal", params);
+    },
+    emitSetObjectPathSignal: (params: SetObjectPathSignal) =>
+    {
+        emitWhenReady("setObjectPathSignal", params);
+    },
+    emitInjectPetSignal: (params: InjectPetSignal) =>
+    {
+        emitWhenReady("injectPetSignal", params);
     },
 }
 

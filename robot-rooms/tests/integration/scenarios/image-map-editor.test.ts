@@ -1036,7 +1036,7 @@ describe("a staging entry", () => {
 });
 
 describe("a sample order", () => {
-    const source = {sha1: "s", fileName: "s.jpg", width: 200, height: 100};
+    const source: SourceEntry = {sha1: "s", fileName: "s.jpg", width: 200, height: 100, addedAt: "2026-01-01T00:00:00.000Z"};
 
     it("takes a rect's height from the cells' shape, and its retouches into the source", () => {
         const made = SampleOrderUtil.toRecipe({source: "s", subfolder: "2", title: "Crate", cells: [2, 1],

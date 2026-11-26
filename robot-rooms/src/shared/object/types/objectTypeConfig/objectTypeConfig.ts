@@ -37,6 +37,12 @@ export default interface ObjectTypeConfig
     // What adding one costs its user each time, in dollars, which the server takes as it adds it (see
     // ServerObjectManager). Absent means nothing.
     price?: number;
+    // What adding this one costs, for a type whose price depends on the object (see ObjectPriceUtil): a pet its user
+    // owns already comes in for nothing. Absent means its price.
+    getPrice?: (room: Room, obj: AddObjectSignal) => number;
+    // Whether the server moves its objects as bodies, by the walking step, as a browser moves what it has a Rigidbody
+    // for (see PetServerUtil): what a cannon ball strikes and its blast throws. Absent, it doesn't.
+    movedAsBody?: boolean;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,

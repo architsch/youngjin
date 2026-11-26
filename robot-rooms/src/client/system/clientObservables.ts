@@ -5,6 +5,7 @@ import ObservableMap from "../../shared/system/types/observableMap";
 import ObservableSet from "../../shared/system/types/observableSet";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
+import type GameObject from "../object/types/gameObject/gameObject";
 import Vec3 from "../../shared/math/types/vec3";
 import ClientProcess from "./types/clientProcess";
 import GameMode from "./types/gameMode";
@@ -70,6 +71,20 @@ export const cannonBallBurstObservable = new Observable<{position: Vec3}>();
 export const cannonBlastObservable = new Observable<{position: Vec3, hitObjectIds: string[],
     struck?: {objectId: string, heading: number}}>();
 
+// A battery or a wrench put into a pet, as the server says it has been (see InjectPetSignal): which (see
+// PetInjectionEnumMap), and where the pet's middle is.
+export const petInjectedObservable = new Observable<{injection: number, position: Vec3}>();
+
+// Fires with each line someone says in the user's room, the user's own included, as it is said: who, by user id, and
+// what. Never peek() it: it holds the last line.
+export const chatLineObservable = new Observable<{userID: string, text: string}>();
+
+// A pet striking the one it attacks: where the two meet (see PetGameObject).
+export const petStrikeObservable = new Observable<{position: Vec3}>();
+
+// A sleeping pet's breath, each time it draws one: over its head.
+export const petSnoreObservable = new Observable<{position: Vec3}>();
+
 // What else befalls the user, or those around them, for whatever presents it (see AudioTriggerUtil). Never peek() one:
 // it holds the last event.
 
@@ -98,6 +113,10 @@ export const reflectionDrawingObservable = new Observable<boolean>(false);
 // Selected object (including the user's own character), or null.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
+// The object selected in play mode, whose tools take the chat input's place, or null (see PlayModeSelectionUtil): only
+// one whose type says it can be (see ObjectTypeClientConfig).
+export const playModeSelectionObservable = new Observable<GameObject | null>(null);
+
 // Fires as the user selects something by hand (a click on it, a movement key's step), with what that left selected
 // and what it took, for the history to keep (see RoomEditUtil). Never peek() it: it holds the last one.
 export const manualSelectionObservable = new Observable<{before: VoxelQuadSelection | ObjectSelection | null,
@@ -110,6 +129,10 @@ export const selectionEditBlockedObservable = new Observable<boolean>(false);
 // Whether the room's volumes show to whoever may edit them, along with the tools that add and edit one (see
 // VolumeGameObject): not until the "volumes on" debug command (see DebugCommandUtil).
 export const volumesShownObservable = new Observable<boolean>(false);
+
+// How wide the pets of a name are drawn from side to side, as a share of their own width, by the name in lower case
+// (see PetGameObject): as the "petscale" debug command last set it (see DebugCommandUtil), until the page is loaded again.
+export const petDrawnWidthsObservable = new Observable<{[name: string]: number}>({});
 
 // Fires with the id of an object this user has just added from a selected face and selected (see
 // ObjectPlacementUtil), whose tools then open on what is left to pick of its look, or carry on from the chooser

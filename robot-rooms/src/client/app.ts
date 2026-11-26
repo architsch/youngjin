@@ -38,6 +38,7 @@ import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 import RoomLoadProgressUtil from "./system/util/roomLoadProgressUtil";
 import WatchedPlayerCameraUtil from "./object/util/watchedPlayerCameraUtil";
 import AudioManager from "./audio/audioManager";
+import PetLineLoadUtil from "./object/util/petLineLoadUtil";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -156,9 +157,12 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
     if (RoomEditorUtil.turnAwayUnasked(roomToJoin))
         return;
     // Along with the first room, so that its arrival is heard once it is on screen if an input has let the page make
-    // sound by then. A camera page is never heard.
+    // sound by then. A camera page is never heard, and plays no pets, which chat in what is fetched here, unawaited.
     if (App.getWatchedUserID().length == 0)
+    {
         AudioManager.load(env.assets_url);
+        void PetLineLoadUtil.load(env.assets_url);
+    }
 
     // Whoever asked for the room has put up the loading screen already; an unasked one puts it up here.
     tryStartClientProcess("roomChange", 1, 0);

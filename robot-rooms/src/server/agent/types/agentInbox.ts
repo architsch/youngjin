@@ -17,6 +17,8 @@ import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
+import PetIdentityUtil from "../../../shared/object/util/petIdentityUtil";
+import PetOwnerUtil from "../../../shared/object/util/petOwnerUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -50,6 +52,8 @@ export default class AgentInbox
     private objectTypeById: {[objectId: string]: string} = {};
     // The helpers' names (see HelperAgentUtil): every NPC in a room an agent can be in is one.
     private helperNameById: {[objectId: string]: string} = {};
+    // The room's pets, each with what it last said, which it is told to say again as often as it shows it.
+    private petById: {[objectId: string]: {name: string, lastLine: string}} = {};
     // How many dollars the agent held when last told.
     private dollars: number | undefined = undefined;
 
@@ -70,6 +74,7 @@ export default class AgentInbox
                 this.playerByObjectId = {};
                 this.objectTypeById = {};
                 this.helperNameById = {};
+                this.petById = {};
                 for (const obj of Object.values(room.objectById))
                     this.noteObject(obj);
                 this.push({kind: "roomEntered", roomID: room.id});
@@ -108,6 +113,7 @@ export default class AgentInbox
                 const objectId = (signalData as RemoveObjectSignal).objectId;
                 const player = this.playerByObjectId[objectId];
                 const type = this.objectTypeById[objectId];
+                delete this.petById[objectId];
                 if (player)
                 {
                     delete this.playerByObjectId[objectId];
@@ -127,10 +133,21 @@ export default class AgentInbox
                 const signal = signalData as SetObjectMetadataSignal;
                 const player = this.playerByObjectId[signal.objectId];
                 const helperName = this.helperNameById[signal.objectId];
+                const pet = this.petById[signal.objectId];
                 const text = signal.metadataValue.trim();
                 const isSpeech = signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage;
                 if (player && signal.metadataKey == ObjectMetadataKeyEnumMap.AdminPrefs)
                     player.ghost = AdminPrefsUtil.decode(signal.metadataValue).ghostMode;
+                // A pet's words: the rest of what whoever plays it tells of it is its own doing, and look's to tell.
+                else if (pet != undefined)
+                {
+                    if (isSpeech && text.length > 0 && text != pet.lastLine)
+                    {
+                        pet.lastLine = text;
+                        this.push({kind: "speech", who: pet.name, whoIsPet: true,
+                            text: MessageLinkUtil.withControlsInWords(text)});
+                    }
+                }
                 else if (player && isSpeech && text.length > 0)
                 {
                     if (!player.ghost)
@@ -220,6 +237,13 @@ export default class AgentInbox
         return events;
     }
 
+    // A pet the agent has just generated (see AgentPetUtil), which it is sent no word of: its words are told from then on,
+    // as any other pet's.
+    notePet(pet: AddObjectSignal): void
+    {
+        this.noteObject(pet);
+    }
+
     // Events from elsewhere: what happened in the agent's own room without it (see AgentAwayLogUtil).
     receive(events: AgentEvent[]): void
     {
@@ -228,8 +252,9 @@ export default class AgentInbox
             this.events.splice(0, this.events.length - AGENT_INBOX_MAX_EVENTS);
     }
 
-    // Records another user's player, or what any other object is (a zone, for a volume). What isn't built, players aside
-    // (a bill blowing about), is nobody's edit, and look tells of it.
+    // Records another user's player, a pet, or what any other object is (a zone, for a volume). What isn't built,
+    // players aside (a bill blowing about, a pet, which does as it likes whether or not its room keeps it), is nobody's
+    // edit, and look tells of it; a pet's words are told as speech.
     private noteObject(obj: AddObjectSignal): void
     {
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
@@ -242,6 +267,8 @@ export default class AgentInbox
                     ghost: AdminPrefsUtil.isGhost(obj)};
             }
         }
+        else if (PetOwnerUtil.isPet(obj))
+            this.petById[obj.objectId] = {name: PetIdentityUtil.getObjectIdentity(obj).name, lastLine: ""};
         else if (config.persistent)
         {
             this.objectTypeById[obj.objectId] = (config == VolumeObjectTypeConfig) ? "zone" : config.objectType.toLowerCase();

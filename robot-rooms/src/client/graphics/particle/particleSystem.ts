@@ -35,12 +35,18 @@ const VIEW_MARGIN = 2;
 // While adaptive resolution is at its floor, emitters spawn this share of their particles.
 const REDUCED_DENSITY = 0.5;
 
+// Longer than any particle lives, slow paces included: the most the clock moves on for a page hidden meanwhile (see
+// onVisibilityChange).
+const MAX_HIDDEN_SECONDS = 60;
+
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 
 let loadPromise: Promise<void> | undefined;
 let loaded = false;
 // Seconds since the room loaded, rebased now and then (see rebaseClock).
 let clock = 0;
+// When the page was hidden, by performance.now(), until it shows again.
+let hiddenAt: number | undefined;
 let blendedBatch: ParticleBatch;
 let solidBatch: ParticleBatch;
 const emitters: Set<ParticleEmitterHandle> = new Set();
@@ -113,7 +119,8 @@ const ParticleSystem =
     // and spawn volume, together.
     play: (effect: string, position: Vec3, options?: {direction?: Vec3, scale?: number, tintHex?: string}): void =>
     {
-        if (!loaded)
+        // Nobody sees one while the page is hidden, and it would only show, stale, once it returns.
+        if (!loaded || document.visibilityState == "hidden")
             return;
         const config = ParticleEffectConfigMap.getConfig(effect);
         if (config == undefined)
@@ -196,7 +203,32 @@ async function build(): Promise<void>
     solidBatch = new ParticleBatch("solid", SOLID_SLOTS, SOLID_RING);
     await blendedBatch.load();
     await solidBatch.load();
+    document.addEventListener("visibilitychange", onVisibilityChange);
     loaded = true;
+}
+
+// A hidden page gets no frames, and those after it come capped in length (see App), which would leave whatever was
+// alive as it hid in the air, where it was, for the rest of its life. So the clock moves on by the time it was hidden:
+// that is gone, as it would be, a one-shot effect still playing ends as it would have, and every stream fills again at
+// once, as one coming into view does.
+function onVisibilityChange(): void
+{
+    if (document.visibilityState == "hidden")
+    {
+        hiddenAt ??= performance.now();
+        return;
+    }
+    if (hiddenAt == undefined)
+        return;
+    const seconds = Math.min(MAX_HIDDEN_SECONDS, (performance.now() - hiddenAt) / 1000);
+    hiddenAt = undefined;
+    clock += seconds;
+    ParticleMaterialUtil.setTime(clock);
+    for (const emitter of emitters)
+    {
+        emitter.elapsed += seconds;
+        emitter.wasInView = false;
+    }
 }
 
 function tickEmitter(emitter: ParticleEmitterHandle, deltaTime: number, density: number)

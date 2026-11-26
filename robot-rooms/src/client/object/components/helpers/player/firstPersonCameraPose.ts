@@ -178,6 +178,12 @@ export default class FirstPersonCameraPose
         return (this.pitchUnderForce != undefined) ? easingRateUnderForce : easingRate;
     }
 
+    // Ends a click's look, the gaze turning back to rest as gently as it turned to it (a play-mode selection let go).
+    endLook(): void
+    {
+        this.lookSpot = undefined;
+    }
+
     // Lets go of a click's look, as when another camera mode takes the camera away from the eye.
     releaseLook(): void
     {

@@ -12,9 +12,11 @@ import User from "../../shared/user/types/user";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import Vector3DUtil from "../../shared/math/util/vector3DUtil";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import ObjectPriceUtil from "../../shared/object/util/objectPriceUtil";
 import ServerInventoryManager from "../inventory/serverInventoryManager";
 import UserBudgetUtil from "../user/util/userBudgetUtil";
 import PlayerMotionCheckUtil from "../user/util/playerMotionCheckUtil";
+import PetServerUtil from "./util/petServerUtil";
 
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
@@ -38,11 +40,14 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        // What costs dollars to add (see ObjectTypeConfig.price) is paid for as it is added, and refused whoever can't.
-        // Checked first, so that nobody pays for what the room then refuses.
-        const price = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).price ?? 0;
+        // What costs dollars to add (see ObjectPriceUtil) is paid for as it is added, and refused whoever can't.
+        // Checked first, so that nobody pays for what the room then refuses. A pet generated is its user's from then
+        // on, which their row is told along with what they paid (see PetServerUtil.adopt).
+        const price = ObjectPriceUtil.getPrice(room, obj);
+        const adopts = PetServerUtil.isAdoption(room, obj);
         if (!ObjectUpdateUtil.canAddObject(user, room, obj)
-            || (price > 0 && !ServerInventoryManager.spendDollars(socketUserContext, price))
+            || (adopts && !PetServerUtil.canAdopt(socketUserContext))
+            || (price > 0 && !ServerInventoryManager.spendDollars(socketUserContext, price, !adopts))
             || !ObjectUpdateUtil.addObject(user, room, obj, false))
         {
             console.error(`onAddObjectSignalReceived :: Failed (objectId=${obj.objectId})`);
@@ -52,6 +57,8 @@ const ServerObjectManager =
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("addObjectSignal", obj, socketUserContext);
+        if (adopts)
+            PetServerUtil.adopt(socketUserContext, room, obj, price);
         return true;
     },
     // A refused edit is answered with what the room really holds of the object, whatever refused it (the edit's own
@@ -74,6 +81,8 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
+        // A pet its owner removes is one they sell (see PetServerUtil.sell).
+        const petSold = PetServerUtil.findPetSoldBy(user, room, signal.objectId);
         if (!ObjectUpdateUtil.removeObject(user, room, signal))
         {
             console.error(`onRemoveObjectSignalReceived :: Failed (userID = ${user.id})`);
@@ -83,6 +92,8 @@ const ServerObjectManager =
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("removeObjectSignal", signal, socketUserContext);
+        if (petSold != undefined)
+            PetServerUtil.sell(socketUserContext, room, petSold);
         return true;
     },
     // Left out, a block it is attached to could be refused its removal ever after, with nobody told why.
@@ -195,6 +206,9 @@ const ServerObjectManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignalFromUser("setObjectMetadataSignal", signal, socketUserContext);
+        // A user's word on how their pets are may say one of them has run out of health.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.Pets)
+            PetServerUtil.buryTheDead(socketUserContext, room);
         return true;
     },
     // The value the object still has.

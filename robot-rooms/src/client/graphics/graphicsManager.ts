@@ -14,6 +14,7 @@ import NumUtil from "../../shared/math/util/numUtil";
 import ShaderPrecompileUtil from "./util/shaderPrecompileUtil";
 import AtmosphereMaterialUtil from "./util/atmosphereMaterialUtil";
 import ParticleMaterialUtil from "./particle/util/particleMaterialUtil";
+import { setEmissiveShaderTime } from "./shaders/instancedEmissiveShader";
 import MirrorReflectionUtil from "./util/mirrorReflectionUtil";
 import { MIRRORED_LAYER } from "../system/clientConstants";
 
@@ -211,6 +212,7 @@ const GraphicsManager =
         AtmosphereMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         ParticleMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         AtmosphereMaterialUtil.update(camera);
+        setEmissiveShaderTime(performance.now() / 1000);
         // Before the room: the glass shows what this draws.
         MirrorReflectionUtil.render(gameRenderer, scene, camera, pointLight,
             fullResolutionHeld ? 1 : reflectionDensity);

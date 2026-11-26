@@ -4,6 +4,7 @@ import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
 import VoxelQuadSelectionMenu from "./components/hud/selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "./components/hud/selection/objectSelectionMenu";
+import PlayModeSelectionMenu from "./components/hud/selection/playModeSelectionMenu";
 import TopBarMenu from "./components/hud/topBar/topBarMenu";
 import CameraZoomSlider from "./components/hud/mode/cameraZoomSlider";
 import Loading from "./components/overlay/loading";
@@ -22,7 +23,7 @@ import User from "../../shared/user/types/user";
 import AuthPromptForm from "./components/form/authPromptForm";
 import DestinationChooserForm from "./components/form/destinationChooserForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
-import { bottomUIHeightObservable, clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
+import { bottomUIHeightObservable, clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, playModeSelectionObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
@@ -30,6 +31,7 @@ import AdminAssetSettingsEditor from "./components/form/adminAssetSettingsEditor
 import ConfirmForm from "./components/form/confirmForm";
 import RoomFilePreviewForm from "./components/form/roomFilePreviewForm";
 import WebPageForm from "./components/form/webPageForm";
+import GeneratePetForm from "./components/form/generatePetForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
@@ -58,8 +60,11 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [forceHideChat, setForceHideChat] = useState<boolean>(false);
     // Lifted here because both the top-bar button (lit state) and the bottom UI (stands down) need it.
     const [roomSettingsOpen, setRoomSettingsOpen] = useState<boolean>(false);
+    // Whether something is selected in play mode, whose tools take the chat input's place (see PlayModeSelectionMenu).
+    const [selectedInPlayMode, setSelectedInPlayMode] = useState<boolean>(false);
 
     useEffect(() => {
+        playModeSelectionObservable.addListener("ui_root", selection => setSelectedInPlayMode(selection != null));
         clientFeatureFlagsObservable.addElementListener("ui_root", FeatureFlag.HideChatInput, (action: "add" | "remove") => {
             setForceHideChat(action == "add");
         });
@@ -93,6 +98,7 @@ export default function UIRoot({ env, user }: UIRootProps)
                 setPopupStack(prev => prev.slice(0, -1)); // Close the topmost popup
         })
         return () => {
+            playModeSelectionObservable.removeListener("ui_root");
             clientFeatureFlagsObservable.removeElementListener("ui_root", FeatureFlag.HideChatInput);
             roomChangedObservable.removeListener("ui_root");
             gameModeObservable.removeListener("ui_root");
@@ -193,7 +199,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         <div ref={bottomUIRef} className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             {!roomSettingsOpen && <ObjectSelectionMenu inEditMode={inEditMode}/>}
             {inEditMode && !roomSettingsOpen && <VoxelQuadSelectionMenu/>}
-            <Chat hide={chatHidden}/>
+            {!inEditMode && !roomSettingsOpen && <PlayModeSelectionMenu/>}
+            <Chat hide={chatHidden || selectedInPlayMode}/>
             <SkipTutorialButton hide={hideSkipTutorialButton}/>
         </div>
         {roomSettingsOpen && <CustomizeRoomPanel onClose={() => setRoomSettingsOpen(false)}/>}
@@ -254,6 +261,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "webPage": return <Popup key={i}>
                     <WebPageForm url={state.params.url}/>
+                </Popup>;
+                case "generatePet": return <Popup key={i} title="Generate Pet">
+                    <GeneratePetForm selection={state.params.selection}/>
                 </Popup>;
             }
         })}

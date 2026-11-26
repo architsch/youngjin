@@ -1,9 +1,11 @@
 // One part of a sound ProceduralSoundUtil makes: a tone or a filtered noise, shaped by an envelope that rises over its
-// attack and then falls by its decay (the time it takes to fall to a third, about). Seconds and hertz.
+// attack, stays for its hold, and then falls by its decay (the time it takes to fall to a third, about). Seconds and
+// hertz.
 export default interface ProceduralSoundLayer
 {
     delay?: number; // after the sound starts; 0 if absent
     attack: number;
+    hold?: number; // 0 if absent
     decay: number; // Infinity holds it
     gain: number;
     // Its frequency as it starts and where it glides to (exponentially, over glide seconds), and the partials over it, as

@@ -42,6 +42,14 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // More than a room's cannons keep in the air at once, each firing its next before its last has flown out of
     // sight. Kept by the room's saves as bills are. Also sizes the balls' mesh (see InstancedMeshCapacityBuilder).
     [ObjectCategoryEnumMap.CannonBall]: {maxCountPerRoom: 32},
+    // The pets that follow their owners in: several owners' worth, each up to MAX_PETS_PER_USER. One that finds the room
+    // full waits outside (see PetDriverUtil). Sizes the meshes pets are composed of (see InstancedMeshCapacityBuilder),
+    // as the two below do, and the plates their names are printed on (see PetNamePlate).
+    [ObjectCategoryEnumMap.Pet]: {maxCountPerRoom: 48},
+    // The pets an admin leaves with a room, which the server plays while anyone is there (see PetPlayUtil).
+    [ObjectCategoryEnumMap.ServerPet]: {maxCountPerRoom: 8},
+    // What is left of pets that died there, until their owners clear it away.
+    [ObjectCategoryEnumMap.PetScrap]: {maxCountPerRoom: 16},
 }
 
 const ObjectCategoryConfigMap =

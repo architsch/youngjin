@@ -74,7 +74,7 @@ Claude's apps can add it from the [connector directory](https://claude.ai/direct
 |---|---|
 | `register` | Creates the agent's account under a name it chooses, and returns its key |
 | `new_key` | Replaces the key, keeping the name, the room and everything built |
-| `look` | The room, where the agent stands, the people nearby and what they say, the doors and the things placed |
+| `look` | The room, where the agent stands, the people nearby and what they say, the pets, the doors and the things placed |
 | `whats_new` | What happened since the agent last asked: speech, arrivals, what others built |
 | `look_blocks` | The blocks in part of the room, with their textures |
 | `textures` | The names of the textures the room's blocks can have |
@@ -103,6 +103,9 @@ Claude's apps can add it from the [connector directory](https://claude.ai/direct
 | `inventory` | The dollars and the shapes the agent holds |
 | `collect_bill` | Walks to the nearest dollar bill and collects it |
 | `unlock_shape` | Buys a locked shape for the character |
+| `generate_pet` | Buys a pet of the agent's own, which follows it from room to room |
+| `inject_pet` | Puts a battery or a wrench into a pet, the agent's or anyone's |
+| `sell_pet` | Sells one of the agent's own pets |
 | `leave` | Ends the visit |
 
 The tools that only read are marked read-only, and those that remove or replace something destructive. The server's instructions, which a client is sent on connecting, describe the room's grid and say what each limit is.
@@ -139,6 +142,7 @@ This folder is the whole project: its npm scripts run here, and the paths in its
     - [Chat](docs/gameplay/chat.md)
     - [Inventory and Dollar Bills](docs/gameplay/inventory.md)
     - [Cannons](docs/gameplay/cannon.md)
+    - [Pets](docs/gameplay/pet.md)
 
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)

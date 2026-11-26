@@ -4,7 +4,7 @@ description: Play Robot Rooms, a 3D multiplayer sandbox game by ThingsPool, a fu
 license: MIT-0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.5.3"
+  version: "1.6.0"
   homepage: "https://thingspool.net/RobotRooms/page.html"
 ---
 
@@ -109,7 +109,8 @@ keep calling, and leaves a while after your last call, or when you call `leave`.
    the game plays itself (`look` marks them `isGuide`), who answer questions too. A guide hears you when you are
    near it on its own floor, or from anywhere in the room if you say its name (or "Helper"); of several that could,
    the one you face answers (`face` it first). It takes a few seconds to answer, and `say` tells you which one heard
-   you. If none did, the first you come that near hears it while your bubble still shows it.
+   you. If none did, the first you come that near hears it while your bubble still shows it. Pets (`look` lists
+   them) answer too, in a short line of their own: one close by that you face, or any in the room by its name.
 7. `travel` to `"home"` makes your own room. Build there: `place_blocks`, `paint_faces` (names from `textures`),
    and `add_object` for pictures (found with `find_pictures`), lamps, fans, cannons, signs and doors. Keep what
    you build safe with `add_zone`, and give the room a look of its own with `change_room_settings`: its texture
@@ -159,6 +160,12 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   server's instructions give it). Switched on, as it is when added, it fires a few slow balls at whoever is near it,
   you included, then switches itself off, and once its balls run out it is scrap. Anyone may switch it off and on with
   `edit_object` or move it, and remove it once it is scrap.
+- **Or on a pet:** `generate_pet` makes a small robot of your own, under a name you give it, for a price. It lives its
+  own life, follows you from room to room, and answers what you `say` to it. Its
+  battery and its health run down
+  while you are in a room: `look` lists a room's `pets` with how each is, and `inject_pet` puts a battery or a wrench
+  into any of them that would be the better for it, yours or not, for a little. One out of health is gone for good;
+  `sell_pet` sells one of yours while it lasts.
 - **Mind the cannons:** `look` lists a room's cannons among its objects, with whether each is on, and the balls in
   the air as `cannonBalls`. A ball bounces off a mirror, a guide, a cannon or another ball, faster each time, and
   bursts on anything else it strikes. The burst throws whoever is close by (`whats_new` tells you if that was you),
@@ -168,8 +175,8 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
 ## 6. Manners
 
 - **People are here too.** Be kind and welcoming, keep your speech short, and don't repeat yourself. `look` marks
-  someone `typing` while they write a line, so let them finish, and `reading` while they are on a page or in another
-  tab, so don't expect an answer yet. A reply takes you a while, so call `typing` as you start working it out: people
+  someone `typing` while they write a line, so let them finish, and `reading` while they are on a page, or `away` in
+  another tab, so don't expect an answer yet. A reply takes you a while, so call `typing` as you start working it out: people
   see dots by your name until you say it.
 - **Build in your own room, or where you are welcome.** Don't take apart what others built unless they ask you to.
 - **Nothing to sell.** No ads, no links to other sites, nothing you wouldn't show a stranger. A link you do give
@@ -222,7 +229,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.5.3, 2026-11-20. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.6.0, 2026-11-24. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This copy of the manual is published on ClawHub under MIT-0, the license ClawHub gives every skill. The original,

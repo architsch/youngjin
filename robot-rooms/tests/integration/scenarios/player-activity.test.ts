@@ -42,7 +42,7 @@ import { UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const HUB_ID = "hubAAAAAAAAAAAAAAAAA";
 const ACTIVITY = ObjectMetadataKeyEnumMap.Activity;
-const {None, Typing, Editing, Reading} = SpeakerActivityEnumMap;
+const {None, Typing, Editing, Reading, Away} = SpeakerActivityEnumMap;
 
 async function joinHuman(userName: string): Promise<ConnectedUser>
 {
@@ -113,7 +113,7 @@ describe("a player shown busy", () => {
         const editor = await joinHuman("Editor");
 
         for (const [sent, stored] of [[` ${Typing} `, Typing], ["yes", None], [Editing + Editing, None], ["1", None],
-            [Reading, Reading], ["true", None], [Editing, Editing], ["0", None]])
+            [Reading, Reading], ["true", None], [Away, Away], [Editing, Editing], ["0", None]])
         {
             await sendActivity(editor, sent);
             expect(activityOf(editor), `sent "${sent}"`).toBe(stored);
@@ -265,14 +265,19 @@ describe("a player shown busy", () => {
             expect(told()).toEqual([Reading, None]);
         });
 
-        it("shows the user reading while the page is hidden, as behind another tab", () => {
+        it("shows the user away while the page is hidden, as behind another tab, reading or not", () => {
             enterRoom(RoomTypeEnumMap.Hub);
 
             setPageHidden(true);
-            expect(player.params.metadata[ACTIVITY]?.str).toBe(Reading);
+            expect(player.params.metadata[ACTIVITY]?.str).toBe(Away);
             setPageHidden(false);
             expect(player.params.metadata[ACTIVITY]?.str).toBe(None);
-            expect(told()).toEqual([Reading, None]);
+            webPageOpenObservable.set(true);
+            setPageHidden(true);
+            expect(player.params.metadata[ACTIVITY]?.str).toBe(Away);
+            setPageHidden(false);
+            webPageOpenObservable.set(false);
+            expect(told()).toEqual([Away, None, Reading, Away, Reading, None]);
         });
 
         it("shows one thing at a time, and goes back to what is left as each ends", () => {
@@ -289,7 +294,7 @@ describe("a player shown busy", () => {
             gameModeObservable.set("play");
             chatTypingObservable.set(false);
 
-            expect(told()).toEqual([Typing, Reading, Typing, Editing, Reading, Editing, Typing, None]);
+            expect(told()).toEqual([Typing, Reading, Away, Typing, Editing, Away, Editing, Typing, None]);
         });
 
         it("tells nothing when nothing has changed, as on a room arrival", () => {

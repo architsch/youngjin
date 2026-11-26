@@ -45,6 +45,9 @@ import HelperIdentity from "../types/helperIdentity";
 import HelperChatUtil from "./helperChatUtil";
 import HelperRemarkUtil from "./helperRemarkUtil";
 import HelperSmallTalkUtil from "./helperSmallTalkUtil";
+import PetChatUtil from "./petChatUtil";
+import PetListener from "../../../shared/object/types/petListener";
+import PetListenerUtil from "../../../shared/object/util/petListenerUtil";
 
 // Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
 // so that a newcomer never arrives to an empty world, each as its BehaviorPrefs have it (one whose personality isn't
@@ -74,6 +77,8 @@ const SINGLE_PLAYER_PLACE = "a single-player room, where the visitor is on their
 // Never their name, which a model then puts in every reply.
 const TOLD_TAG = "knows how to play";
 const UNTOLD_TAG = "not yet told how to play";
+
+const NOBODY = {helper: undefined, pet: undefined};
 
 const REFUSAL_LINES: {[refusal in HelperChatRefusal]: string} = {
     noModel: "Sorry, I can only say hello for now. Have fun exploring!",
@@ -166,8 +171,9 @@ const HelperAgentUtil =
         for (const helper of helpers.values())
             HelperBehaviorUtil.act(helper, surroundingsOf(helper), seconds, now);
     },
-    // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil), for whichever helper it is for
-    // (see HelperBehaviorUtil.pickListener), or else for the one it is for once they come near one (see hearLateLines).
+    // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil), for whichever helper or pet it
+    // is for (see HelperBehaviorUtil.pickListener), or else for the helper it is for once they come near one (see
+    // hearLateLines).
     // Only a player's own lines come here: what a helper says goes to its room directly (see send), so helpers never
     // hear one another, and two near each other chat only in fixed words (see startSmallTalks), never at the key's
     // expense. A ghost isn't heard while it is one, since an answer would show everyone it is there.
@@ -181,8 +187,11 @@ const HelperAgentUtil =
         const text = signal.metadataValue.trim();
         if (text.length == 0)
             return;
-        const helper = findListener(userID, text);
-        if (helper == undefined)
+        // A line is for one listener: a helper, or else a pet of the room (see PetChatUtil), which answers it instead.
+        const {helper, pet} = findListener(userID, text);
+        if (pet != undefined)
+            PetChatUtil.hear(ctx, pet.objectId, text);
+        else if (helper == undefined)
             state.unheardLines.set(userID, {ctx, text});
         else
             keepToAnswer(helper, ctx, text, Date.now());
@@ -304,11 +313,14 @@ const HelperAgentUtil =
                 helpers.delete(key);
         }
     },
-    // The name of the helper a user's line is for, as hear finds it, so that an agent can be told whether it was heard.
-    getListenerName: (userID: string, text: string): string | undefined =>
+    // Who a user's line is for, as hear finds it, by name, and whether that is a pet rather than a helper, so that an
+    // agent can be told whether it was heard, and by whom.
+    getListener: (userID: string, text: string): {name: string, isPet: boolean} | undefined =>
     {
-        const helper = (text.trim().length == 0) ? undefined : findListener(userID, text.trim());
-        return (helper == undefined) ? undefined : (helper.name || "a guide");
+        const {helper, pet} = (text.trim().length == 0) ? NOBODY : findListener(userID, text.trim());
+        if (pet != undefined)
+            return {name: pet.name, isPet: true};
+        return (helper == undefined) ? undefined : {name: helper.name || "a guide", isPet: false};
     },
     // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look), with the helper each is
     // chatting with, if it is, and the person it stands waiting on as they type it a line, if it is, by name, and the
@@ -327,17 +339,19 @@ const HelperAgentUtil =
     },
 }
 
-// The helper in the user's room that a line of theirs is for (see HelperBehaviorUtil.pickListener), or would be, for a
-// line being typed (""). A ghost isn't heard. A player's transform points behind it (see SpawnHotspotUtil), so it faces
-// the other way.
-function findListener(userID: string, text: string): HelperState | undefined
+// Who in the user's room a line of theirs is for (see HelperBehaviorUtil.pickListener), or would be, for a line being
+// typed (""): a helper, or a pet, or nobody. A ghost isn't heard. A player's transform points behind it (see
+// SpawnHotspotUtil), so it faces the other way.
+function findListener(userID: string, text: string): {helper: HelperState | undefined, pet: PetListener | undefined}
 {
     const player = ServerUserManager.getPlayerObject(userID);
     const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
-    if (player == undefined || roomID == undefined || AdminPrefsUtil.isGhost(player))
-        return undefined;
+    const room = ServerRoomManager.roomRuntimeMemories[roomID]?.room;
+    if (player == undefined || room == undefined || AdminPrefsUtil.isGhost(player))
+        return NOBODY;
     return HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID), text,
-        player.transform.pos, Vector3DUtil.scale(player.transform.dir, -1));
+        player.transform.pos, Vector3DUtil.scale(player.transform.dir, -1),
+        PetListenerUtil.find(room, text, player.transform.pos));
 }
 
 // Its room as its behavior asks of it: shown to the room, whose players are the people about, ghosts aside. One
@@ -415,7 +429,7 @@ function waitOnTypists(now: number): void
             state.typingUserIDs.delete(userID);
             continue;
         }
-        const helper = findListener(userID, "");
+        const {helper} = findListener(userID, "");
         if (helper != undefined && !typistOf.has(helper))
             typistOf.set(helper, userID);
     }
@@ -431,7 +445,8 @@ function isTyping(userID: string): boolean
 
 // What someone says that no helper heard as they said it is heard by the one it would be for (see findListener) once
 // they come near one, or one comes near them, wherever they go, while it is still up (until they clear it, it expires
-// or they say something else), and only on the connection they said it on.
+// or they say something else), and only on the connection they said it on. No pet hears a line late: one goes
+// wherever its owner does, and would answer whatever they had last said to anyone.
 function hearLateLines(now: number): void
 {
     for (const [userID, {ctx, text}] of state.unheardLines)
@@ -443,7 +458,7 @@ function hearLateLines(now: number): void
             state.unheardLines.delete(userID);
             continue;
         }
-        const helper = findListener(userID, text);
+        const {helper} = findListener(userID, text);
         if (helper == undefined)
             continue;
         state.unheardLines.delete(userID);

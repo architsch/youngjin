@@ -74,6 +74,8 @@ error_page 502 503 504 /error/deploying.html;
 
 Workflows share a concurrency group per app, so they queue rather than interleave. No workflow ships the Nginx config: a change to `dev/config/nginx_*.txt` needs `npm run nginx:update` by hand.
 
+**The site's assets serve staging and live alike**, and every push publishes them ahead of the live build: an asset a build reads under a name that stays must go on meaning what that build expects until live is promoted. The audio bundle is named by its version for this (see [audio.md](../../audio/audio.md)), and one stays while staging, live or the backup a rollback restores plays it.
+
 The deploy, promote and rollback workflows register their app with PM2 anew (`pm2 delete`, `pm2 start`, `pm2 save`) rather than restart it: PM2 keeps the script path and working directory an app was first started with, and a restart reuses them whatever `ecosystem.config.js` says since. The restart workflows use a plain `pm2 restart`, which changes nothing about what runs.
 
 ### Client bundles on disk

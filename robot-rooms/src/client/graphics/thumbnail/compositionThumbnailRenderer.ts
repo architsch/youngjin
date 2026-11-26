@@ -15,6 +15,8 @@ import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID, LIGHT_COLOR_
 import GeometryFactory from "../factories/geometryFactory";
 import MaterialFactory from "../factories/materialFactory";
 import InstancedPartUtil from "../util/instancedPartUtil";
+import { TIN_RUST_ATTRIBUTE } from "../shaders/instancedTinShader";
+import { EMISSIVE_GLYPH_ATTRIBUTE, EMISSIVE_GLYPH_SHAPE_ATTRIBUTE } from "../shaders/instancedEmissiveShader";
 
 // Never part of the client app: CompositionThumbnailBuilder loads this into a headless browser to draw each
 // pre-encoded composition with the game's own geometry and materials, and dev tools import it to preview them.
@@ -140,6 +142,12 @@ async function buildMeshes(encoded: string, root: THREE.Object3D): Promise<THREE
         geometry.setAttribute("uvSampleSize", new THREE.InstancedBufferAttribute(new Float32Array(group.length * 2).fill(1), 2));
         geometry.setAttribute("mouldingColor", mouldingColorAttrib);
         geometry.setAttribute("mouldingParams", mouldingParamsAttrib);
+        const rustAttrib = new THREE.InstancedBufferAttribute(new Float32Array(group.length), 1);
+        const glyphAttrib = new THREE.InstancedBufferAttribute(new Float32Array(group.length * 4), 4);
+        const glyphShapeAttrib = new THREE.InstancedBufferAttribute(new Float32Array(group.length * 4), 4);
+        geometry.setAttribute(TIN_RUST_ATTRIBUTE, rustAttrib);
+        geometry.setAttribute(EMISSIVE_GLYPH_ATTRIBUTE, glyphAttrib);
+        geometry.setAttribute(EMISSIVE_GLYPH_SHAPE_ATTRIBUTE, glyphShapeAttrib);
 
         const mesh = new THREE.InstancedMesh(geometry, material, group.length);
         mesh.frustumCulled = false;
@@ -155,6 +163,9 @@ async function buildMeshes(encoded: string, root: THREE.Object3D): Promise<THREE
                     part.mouldingColor.x, part.mouldingColor.y, part.mouldingColor.z,
                     part.mouldingThickness, part.mouldingIsConvex);
             }
+            // A thumbnail is seen from wherever it is drawn, so nothing in it dims with distance.
+            InstancedPartUtil.setInstanceRust(rustAttrib, instanceId, part.rust ?? 0);
+            InstancedPartUtil.setInstanceGlyph(glyphAttrib, glyphShapeAttrib, instanceId, part.glyph, false);
         });
         meshes.push(mesh);
     }

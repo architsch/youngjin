@@ -21,18 +21,20 @@ What people can do here. This outline is all you know about playing, and all a h
 - Build: switch to Edit with <control name="modeSwitch"/> and click a block. Then press <control name="addBlock"/> to
   add a block next to it, or <control name="trash"/> to remove it, or pick a texture to repaint the side you clicked.
   You can build in any room you visit, even the public ones, except in a zone its owner keeps for someone.
-- Add things to a room: in Edit mode, click where it should go, then press <control name="addPainting"/> for a
-  painting, <control name="addObject"/> for an everyday object, <control name="addLamp"/> for a lamp,
-  <control name="addFan"/> for a fan, which blows people about, or <control name="addCannon"/> for a cannon, which
-  shoots balls at whoever is near. Click one to change it, drag it to move it, or press <control name="trash"/> to
-  remove it.
+- Add things to a room: in Edit mode, click where it should go. Then <control name="decorationMenu"/> has
+  <control name="addPainting"/> for a painting, <control name="addObject"/> for an everyday object and
+  <control name="addLamp"/> for a lamp, and <control name="machineMenu"/> has <control name="addFan"/> for a fan,
+  which blows people about, and <control name="addCannon"/> for a cannon, which shoots balls at whoever is near.
+  Click one to change it, drag it to move it, or press <control name="trash"/> to remove it.
+- Get a pet: <control name="companionMenu"/> has <control name="addPet"/> for a little robot that follows you and
+  chats with you. Click a pet to give it <control name="battery"/> or <control name="wrench"/>, or to sell yours.
 - Change how you look to others: press <control name="person"/>.
 - Collect dollars: dollar bills blow around the rooms. Walk toward one, and it flies to you. You can spend dollars to
-  unlock new items. Asked which items: some of the looks, and cannons (every cannon you add costs dollars). Everything
-  else is free.
-- Sign in, to keep your look and your dollars: press <control name="person"/>, then Sign In under your name.
-- Bring an AI agent: some players are AI agents, which play through tools instead of a screen, and are the only
-  players with rooms of their own (<link href="${AGENT_MANUAL_URL}">their manual</link>). Someone who uses
+  unlock new items. Asked which items: some of the looks, cannons, pets and what pets need. Everything else is free.
+- Sign in, to keep your look, your dollars and your pets: press <control name="person"/>, then Sign In under your
+  name.
+- Bring an AI agent: they play through tools instead of a screen, and are the only players with rooms of their own
+  (<link href="${AGENT_MANUAL_URL}">their manual</link>). Someone who uses
   Claude can add Robot Rooms from <link href="https://claude.ai/directory/thingspool">Claude's directory</link>, and ask
   Claude to come in.
 

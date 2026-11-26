@@ -1,6 +1,6 @@
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
-import { notificationMessageObservable, volumesShownObservable } from "../clientObservables";
+import { notificationMessageObservable, petDrawnWidthsObservable, volumesShownObservable } from "../clientObservables";
 import { colliderDebugEnabledObservable, dummyImagesDebugEnabledObservable,
     roomListDebugEnabledObservable } from "../../../shared/system/sharedObservables";
 import UserAPIClient from "../../networking/client/userAPIClient";
@@ -17,10 +17,22 @@ import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import { CHEAT_DOLLARS } from "../../../shared/system/sharedConstants";
 import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
 import ClientInventoryManager from "../../inventory/clientInventoryManager";
+import PetDriverUtil from "../../object/util/petDriverUtil";
+import PetNeeds from "../../../shared/object/types/petNeeds";
+import PetIdentityUtil from "../../../shared/object/util/petIdentityUtil";
+import PetOwnerUtil from "../../../shared/object/util/petOwnerUtil";
 import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
 
 // The cheat code: "rosebud", or "rosebud N" for N times its dollars.
 const CHEAT_COMMAND_PATTERN = /^rosebud(?:\s+(\d+))?$/;
+// "pets H B [A [R [F]]]": the user's pets in the room are at once at H percent of their health and B percent of their
+// battery, and, where given, at A percent of their anger, R of their horror and F of their fatigue.
+const PET_NEEDS_COMMAND_PATTERN = /^pets\s+(\d+)\s+(\d+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?$/;
+const PET_NEED_NAMES: (keyof PetNeeds)[] = ["health", "energy", "anger", "horror", "fatigue"];
+// "petscale NAME P": the pets of that name, whatever its case, are drawn P percent as wide from side to side, held to
+// this range (see petDrawnWidthsObservable).
+const PET_WIDTH_COMMAND_PATTERN = /^petscale\s+(.+?)\s+(\d+(?:\.\d+)?)$/;
+const PET_WIDTH_PERCENT_RANGE = [1, 1000];
 
 // The debug panel's commands (see DebugStats), each run by the text typed for it.
 const DebugCommandUtil =
@@ -34,6 +46,27 @@ const DebugCommandUtil =
         if (cheatMultiplier != undefined && App.getEnv().mode == "dev")
         {
             grantCheatDollars(cheatMultiplier);
+            return;
+        }
+        // Likewise a dev server's alone: what a pet's health and battery are is its user's browser's to tell.
+        const petNeeds = PET_NEEDS_COMMAND_PATTERN.exec(command);
+        if (petNeeds != null && App.getEnv().mode == "dev")
+        {
+            const needs: Partial<PetNeeds> = {};
+            petNeeds.slice(1).forEach((percent, i) => {
+                if (percent != undefined)
+                    needs[PET_NEED_NAMES[i]] = Math.min(100, Number(percent)) / 100;
+            });
+            const numPets = PetDriverUtil.setNeeds(needs);
+            notificationMessageObservable.set(`Pets: ${numPets} set to ` + Object.entries(needs)
+                .map(([name, share]) => `${name} ${Math.round(100 * share)}%`).join(", ") + ".");
+            return;
+        }
+        // Anywhere: it changes only what this browser draws.
+        const petWidth = PET_WIDTH_COMMAND_PATTERN.exec(command);
+        if (petWidth != null)
+        {
+            setPetWidth(PetIdentityUtil.sanitizeName(petWidth[1]), Number(petWidth[2]));
             return;
         }
         switch (command)
@@ -91,6 +124,17 @@ function grantCheatDollars(multiplier: number): void
     }
     SocketsClient.emitUserCommandSignal(new UserCommandSignal(`grantCheatDollars ${multiplier}`));
     notificationMessageObservable.set(`Rosebud: +$${dollars}.`);
+}
+
+// "petscale" debug command: kept by the name, for pets of it that come in later too.
+function setPetWidth(name: string, percent: number): void
+{
+    const shown = Math.min(PET_WIDTH_PERCENT_RANGE[1], Math.max(PET_WIDTH_PERCENT_RANGE[0], percent));
+    petDrawnWidthsObservable.set({...petDrawnWidthsObservable.peek(), [name]: shown / 100});
+    const room = App.getCurrentRoom();
+    const numPets = (room == undefined) ? 0 : Object.values(room.objectById).filter(obj =>
+        PetOwnerUtil.isPet(obj) && PetIdentityUtil.getObjectIdentity(obj).name.toLowerCase() == name).length;
+    notificationMessageObservable.set(`Petscale: ${name} drawn ${shown}% as wide (${numPets} in the room).`);
 }
 
 // "restart tutorial" debug command. Only allowed when not in a single-player mode (also enforced

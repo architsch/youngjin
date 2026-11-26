@@ -21,7 +21,6 @@ export const AUDIO_MARKER_TIME = 0.1;
 // The longest a clip in the bundle may be. The whole bundle downloads before any clip plays and stays decoded in memory,
 // so anything longer streams from an MP3 file of its own.
 export const AUDIO_MAX_BUNDLED_SECONDS = 10;
-export const AUDIO_BUNDLE_FILE_NAME = "bundle.mp3";
 
 const ROOT_DIR_NAME = "audio";
 const MANIFEST_FILE_NAME = "manifest.json";
@@ -49,14 +48,20 @@ export default class AudioBundleBuilder
         this.proceduralSounds = options?.proceduralSounds ?? ProceduralSounds;
     }
 
+    // Named by its version, since the site serves staging and live alike: the live build goes on cutting its own bundle
+    // while staging's newer one is published beside it.
+    static getBundleFileName(version: string): string
+    {
+        return `bundle-${version}.mp3`;
+    }
+
+    // An earlier bundle is never removed here, since a build still deployed may play it (see .claude/rules/audio-files.md).
     async build(): Promise<void>
     {
         const {mapText, version, pcm, numChannels} = await this.plan();
-        const bundlePath = path.join(this.rootPath, AUDIO_BUNDLE_FILE_NAME);
         const previousMapText = await readTextIfAny(this.mapFilePath);
-        if (pcm == undefined)
-            await fs.rm(bundlePath, {force: true});
-        else if (readBundleVersion(previousMapText) != version || !existsSync(bundlePath))
+        const bundlePath = path.join(this.rootPath, AudioBundleBuilder.getBundleFileName(version));
+        if (pcm != undefined && (readBundleVersion(previousMapText) != version || !existsSync(bundlePath)))
         {
             try
             {
@@ -114,8 +119,8 @@ export default class AudioBundleBuilder
             .update(`${numChannels},${rate},${MP3_VBR_QUALITY}`).digest("hex").slice(0, 16);
         const clips = bundled.map((clip, i): [string, {start: number, duration: number}] =>
             [clip.name, {start: starts[i] / rate, duration: clip.channels[0].length / rate}]);
-        return {mapText: getMapText(`${ROOT_DIR_NAME}/${AUDIO_BUNDLE_FILE_NAME}`, version, clips, streams), version, clips,
-            streams, pcm, numChannels};
+        return {mapText: getMapText(`${ROOT_DIR_NAME}/${AudioBundleBuilder.getBundleFileName(version)}`, version, clips,
+            streams), version, clips, streams, pcm, numChannels};
     }
 
     // The game's own sounds, then the manifest's clips in its order: those for the bundle at its rate, and the streams.

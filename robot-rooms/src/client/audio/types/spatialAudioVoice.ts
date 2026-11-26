@@ -1,4 +1,5 @@
 import Vec3 from "../../../shared/math/types/vec3";
+import AudioPhrasePart from "./audioPhrasePart";
 import AudioVoice from "./audioVoice";
 import SpatialAudioUtil from "../util/spatialAudioUtil";
 
@@ -12,9 +13,10 @@ export default class SpatialAudioVoice extends AudioVoice
     private muffler: BiquadFilterNode | undefined;
     private panner: StereoPannerNode | undefined;
 
-    constructor(clips: readonly string[], looping: boolean, volume: number, rate: number, position: Vec3, range: number)
+    constructor(clips: readonly string[], looping: boolean, volume: number, rate: number, position: Vec3, range: number,
+        parts?: readonly AudioPhrasePart[])
     {
-        super(clips, looping, volume, rate);
+        super(clips, looping, volume, rate, parts);
         this.position = {x: position.x, y: position.y, z: position.z};
         this.range = range;
     }

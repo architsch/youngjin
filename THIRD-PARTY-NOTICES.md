@@ -64,7 +64,7 @@ The recordings under `public/app/assets/audio/BigSoundBank/` and
 `public/app/assets/audio/Freesound/` are cut from sounds released under
 [CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/).
 The game's build encodes them, with the game's own synthesized sounds,
-into the bundle the game plays (`public/app/assets/audio/bundle.mp3`). CC0
+into the bundles the game plays (`public/app/assets/audio/bundle*.mp3`, one a version). CC0
 requires no credit; the attribution below is given because it is deserved.
 
 | File | Sound | Author | Source |

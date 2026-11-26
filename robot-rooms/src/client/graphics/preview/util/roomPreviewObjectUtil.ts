@@ -22,13 +22,15 @@ import ColorUtil from "../../../../shared/math/util/colorUtil";
 import ObjectCompositionUtil from "../../../../shared/object/util/objectCompositionUtil";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import QuarterTurnsUtil from "../../../../shared/object/util/quarterTurnsUtil";
-import { BACKWARD_DIR, COLLISION_LAYER_HEIGHT, INSTANCE_COLORED_MATERIAL_IDS,
-    INSTANCED_WOOD_MATERIAL_ID } from "../../../../shared/system/sharedConstants";
+import { BACKWARD_DIR, COLLISION_LAYER_HEIGHT, INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EMISSIVE_MATERIAL_ID,
+    INSTANCED_TIN_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID } from "../../../../shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import ObjectPoseUtil from "../../../object/util/objectPoseUtil";
 import { ROOM_PREVIEW_VIEW_DIR } from "../../../system/clientConstants";
 import MeshFactory from "../../factories/meshFactory";
 import { getTurnedUV } from "../../shaders/instancedTexturePackShader";
+import { TIN_RUST_ATTRIBUTE } from "../../shaders/instancedTinShader";
+import { EMISSIVE_GLYPH_ATTRIBUTE, EMISSIVE_GLYPH_SHAPE_ATTRIBUTE } from "../../shaders/instancedEmissiveShader";
 import InstancedPartUtil from "../../util/instancedPartUtil";
 import PictureLayoutUtil from "../../util/pictureLayoutUtil";
 import RoomPreviewLevel from "../types/roomPreviewLevel";
@@ -183,6 +185,21 @@ async function createPartsMesh(placedParts: {part: InstancedMeshCompositionPart,
         mesh.geometry.setAttribute("mouldingColor", mouldingAttribs.color);
         mesh.geometry.setAttribute("mouldingParams", mouldingAttribs.params);
     }
+    // Tin parts carry how aged they are, and emissive parts what they draw (see InstancedMeshBinding), which a
+    // picture taken from above shows at full glow.
+    const rustAttrib = (materialId != INSTANCED_TIN_MATERIAL_ID) ? undefined
+        : new THREE.InstancedBufferAttribute(new Float32Array(placedParts.length), 1);
+    const glyphAttribs = (materialId != INSTANCED_EMISSIVE_MATERIAL_ID) ? undefined : {
+        glyph: new THREE.InstancedBufferAttribute(new Float32Array(placedParts.length * 4), 4),
+        shape: new THREE.InstancedBufferAttribute(new Float32Array(placedParts.length * 4), 4),
+    };
+    if (rustAttrib)
+        mesh.geometry.setAttribute(TIN_RUST_ATTRIBUTE, rustAttrib);
+    if (glyphAttribs)
+    {
+        mesh.geometry.setAttribute(EMISSIVE_GLYPH_ATTRIBUTE, glyphAttribs.glyph);
+        mesh.geometry.setAttribute(EMISSIVE_GLYPH_SHAPE_ATTRIBUTE, glyphAttribs.shape);
+    }
 
     placedParts.forEach(({part, parent}, instanceId) => {
         InstancedPartUtil.bakePartMatrix(parent, part.offset.x, part.offset.y, part.offset.z,
@@ -196,6 +213,10 @@ async function createPartsMesh(placedParts: {part: InstancedMeshCompositionPart,
                 part.mouldingColor.x, part.mouldingColor.y, part.mouldingColor.z,
                 part.mouldingThickness, part.mouldingIsConvex);
         }
+        if (rustAttrib)
+            InstancedPartUtil.setInstanceRust(rustAttrib, instanceId, part.rust ?? 0);
+        if (glyphAttribs)
+            InstancedPartUtil.setInstanceGlyph(glyphAttribs.glyph, glyphAttribs.shape, instanceId, part.glyph, false);
     });
     return mesh;
 }

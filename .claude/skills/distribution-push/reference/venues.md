@@ -263,7 +263,9 @@ suggest from it.
   `net.thingspool/thingspool` 1.0.0 from `server.json`, with `mcp-publisher` signed in by the
   thingspool.net DNS key. Several directories below copy from it, so it is the one to keep current. Since 2026-11-19
   the entry is `net.thingspool/robot-rooms` (the old name deprecated, with a pointer); 1.7.2 on 2026-11-20, in step
-  with live.
+  with live, and 1.8.0 from that evening (published at 20:25 KST, once live served it; it carries the header
+  description GitHub's registry asked for). Before publishing, ask live for its version: an `initialize` sent to
+  `/mcp` with the link-check user agent answers with `serverInfo.version`, and `tools/list` needs no key.
 - **Glama** (glama.ai/mcp/connectors): imports registry entries by itself. ThingsPool appeared at
   `glama.ai/mcp/connectors/net.thingspool/thingspool` within the hour, "Healthy", with all 25 tools and a
   tool-quality score being calculated. The owner may "claim ownership" by verifying the domain or a
@@ -320,7 +322,12 @@ suggest from it.
   blocks". OpenClaw's bundled clawhub skill tells agents to prefer searching for *plugins*, and a bundle
   plugin can carry a streamable-http MCP config (docs.openclaw.ai/plugins/bundles). **Featured** is 16
   slots picked by 30-day installs with a maintainer's approval, and "not taking requests" (a maintainer,
-  2026-06-15); **trending** ranks the last 24 UTC hours of installs.
+  2026-06-15); **trending** ranks the last 24 UTC hours of installs. On the evening of 2026-11-20 it is one version
+  behind: the repository's manual is 1.5.3 (a commit of that day), `latest` here 1.5.2, and the plugin's own
+  repository holds 1.5.2 as well. At his yes 1.5.3 was published here that evening (`publish dev/clawhub/robot-rooms
+  --slug robot-rooms --version <v> --changelog "…"`, a `--dry-run` first): "pending security scans", then `latest`
+  and clean about ten minutes later. The plugin's repository was left at 1.5.2, at his choice (see the plugin
+  directories below).
 - **Claude's Connectors Directory: ThingsPool listed 2026-10-28** (https://claude.ai/directory/thingspool),
   published about 30 minutes after submission. Track it in the portal's Usage tab: rank, health, accounts
   that connected or used a tool, tool calls and error rate, a day behind. On 2026-11-08: rank #7,252 (#6,732 on
@@ -415,6 +422,10 @@ suggest from it.
   `temp/distribution/github-mcp-registry/reply-2026-11-20.md`. Approved 2026-11-20 and made in the working tree
   (the README's MCP section, the header's description, endpoint 1.7.3, a test holding the README's tools to the
   endpoint's); the reply goes out once that is committed, live, and in the registry.
+  **Replied 2026-11-20** (20:27 KST), in that thread, once he had pushed and promoted and the registry showed the
+  fix (as 1.8.0, the day's commit having carried a feature too): the three asks answered, the README's section
+  linked (`…/tree/main/robot-rooms#mcp-server`), and the server's new name given. Nothing more to send until
+  GitHub answers; its answer will come to that thread.
 - **MCP Market** (mcpmarket.com/submit; it claims 1M+ monthly visitors): the free queue (4 to 6 weeks) and the $29
   listing take a GitHub repository, a program to install. A hosted endpoint is "a separate paid listing" (the page's
   own words), so ThingsPool's would be paid, which he declines. It lists Golemreach, an MMO for people and agents, from
@@ -462,6 +473,13 @@ suggest from it.
   No rule on AI-made pull requests. Category for a game agents play: Game Development (it holds STS2MCP and
   Playable Gift). Kit at `temp/distribution/sagargupta16-mcp/`. **Verified:** 2026-11-20 (`CONTRIBUTING.md`, the
   template, both scripts).
+  **Submitted and listed 2026-11-20** (pull request #473, see the ledger): opened with his star already given, eight
+  checks green, merged by itself two minutes later, the folder link's note for a maintainer notwithstanding. The
+  template shows the boxes for both kinds of entry; the two hosted entries merged that day kept only the hosted
+  set, and this one only the ordinary set. A row padded
+  to its neighbours' column widths passes "Validate format" without running the list's script. To change the entry
+  later: a pull request that says what changed ("Updating or removing an entry"). Its bot comments within the hour
+  with the entry's page on the list's site: not yet seen.
 - **Small lists and forms** (found 2026-11-13; read again by research 2026-11-20 unless marked):
   LHL3341/awesome-claws (99 stars; one line under Agent Community in both READMEs, where Plazmi sits; nothing
   merged since 10-16, eleven PRs waiting); collabnix/awesome-mcp-lists (43 stars; hosted endpoints allowed; merges
@@ -602,7 +620,12 @@ suggest from it.
     Claude Code users can already add it from the repository (`claude plugin marketplace add
     architsch/thingspool-plugin`, then `claude plugin install thingspool@thingspool`; once the package
     renamed on 2026-11-18 and 11-19 is pushed and he has renamed the repository, `architsch/robot-rooms-plugin`
-    and `robot-rooms@robot-rooms`).
+    and `robot-rooms@robot-rooms`). Both were done on 2026-11-19: read on 11-20, the repository answers as
+    `architsch/robot-rooms-plugin` (the old name redirects), its marketplace and plugin are named `robot-rooms`,
+    and it holds 1.5.2. **No push while a first version is in review:** on 2026-11-20, with the package in the
+    game's repository at 1.5.3, he chose again (as on 11-17) to leave the plugin's repository at the version the
+    reviewer has, since what a new commit does to that review is unknown. Don't propose the push before the
+    reviewer decides; then build and push whatever the package is by that day.
   - **skills.sh:** no submission; a page appears after the first `npx skills add`. On `architsch/youngjin` that
     command finds the nine internal skills under `.claude/skills/` first and never offers ThingsPool's. The clean
     route is a file on thingspool.net, `/.well-known/agent-skills/index.json` (draft format 0.2.0: name, `type:
@@ -906,7 +929,13 @@ is spent once: a second suggestion needs real news behind it. Inclusion is alway
   gone. Six remain: four of this skill's, each with an open pull request (`osvg-list`, `awesome-remote-mcp-servers`,
   `awesome-open-source-games`, `opensourcegames`), and two of `writing-push`'s (`awesome-philosophy`, `hnpwd`). A fork can be made under
   another name (`gh repo fork <repo> --fork-name <name>`), which keeps two lists of one name apart: `osvg-list` is
-  OpenSourceVideoGames/list's.
+  OpenSourceVideoGames/list's. By the evening of 2026-11-20 there are seven, two of them finished: `osvg-list` (its
+  pull request merged that day) and the new `sagargupta16-awesome-mcp-servers` (opened and merged that evening).
+  At his yes both were walked that evening to GitHub's "Confirm access" page (an authenticator code, `sudo_app_otp`),
+  each in a tab of its own in his Chrome, and left there for him; check with `gh api repos/<fork>` (404 once gone)
+  before counting them deleted. He entered his code in each and both are gone (404). Five remain: three of this
+  skill's, each with an open pull request (`awesome-remote-mcp-servers`, `awesome-open-source-games`,
+  `opensourcegames`), and two of `writing-push`'s (`awesome-philosophy`, `hnpwd`).
 - **The repository's own page:** the README's Play link carries `?ref=github` (his word, 2026-11-17; live once that
   edit is pushed). So the `github` source in the funnel report is everyone who came from the repository's page,
   whichever list or registry sent them there (the open-source game lists, the MCP Registry's repository link); it
@@ -1042,7 +1071,7 @@ placements").
 
 Surveyed on 2026-11-20, by three research passes (players, agent operators, the Three.js and creative-coding
 crowd): the pool of venues that take a link on his yes alone is nearly spent. Two were found and kitted
-(Sagargupta16's list of MCP servers, and OpenSourceVideoGames/list), with mcpserver.cc as a small spare. What is
+(Sagargupta16's list of MCP servers, and OpenSourceVideoGames/list; both listed the same day), with mcpserver.cc as a small spare. What is
 left needs an account of his (pbbg.com, MCP World, ModelScope), his own words, or a build to upload. Leads not
 read: Stork.AI (a form that tests the endpoint as it is sent), tolkonepiu/best-of-mcp-servers (a `projects.yaml`
 pull request, 100 waiting), Metaversed's directory of virtual worlds, and the second page of mcpserverhub.com's

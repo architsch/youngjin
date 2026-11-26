@@ -13,6 +13,9 @@ import MirrorObjectTypeConfig from "../types/objectTypeConfig/mirrorObjectTypeCo
 import DollarBillObjectTypeConfig from "../types/objectTypeConfig/dollarBillObjectTypeConfig";
 import CannonObjectTypeConfig from "../types/objectTypeConfig/cannonObjectTypeConfig";
 import CannonBallObjectTypeConfig from "../types/objectTypeConfig/cannonBallObjectTypeConfig";
+import PetObjectTypeConfig from "../types/objectTypeConfig/petObjectTypeConfig";
+import ServerPetObjectTypeConfig from "../types/objectTypeConfig/serverPetObjectTypeConfig";
+import PetScrapObjectTypeConfig from "../types/objectTypeConfig/petScrapObjectTypeConfig";
 import { ObjectCategoryEnumMap } from "../types/objectCategory";
 
 // All GameObject types and the components each spawns with. Type indices are stored with objects, so
@@ -35,6 +38,9 @@ function getObjectTypeConfigPairs(): [number, ObjectTypeConfig][]
         [11, DollarBillObjectTypeConfig],
         [12, CannonObjectTypeConfig],
         [13, CannonBallObjectTypeConfig],
+        [14, PetObjectTypeConfig],
+        [15, ServerPetObjectTypeConfig],
+        [16, PetScrapObjectTypeConfig],
     ];
 }
 

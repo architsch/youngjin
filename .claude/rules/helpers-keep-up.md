@@ -72,7 +72,7 @@ What they show and look at:
 
 6. **Pictures of controls** (`ScreenControlMap`; see `docs/gameplay/chat.md`): helpers write a control
    as its picture, never as a key or a place on the screen. A control they newly name gets a picture
-   first (the `helper-instructions` skill says how); a renamed or removed one leaves no line naming it.
+   first (the `gameplay-ai` skill says how); a renamed or removed one leaves no line naming it.
 7. **Sights** (`HelperBehaviorUtil`'s `findSights`): a new kind of thing in a room may be one they go and
    look at, with remark lines of its own kind.
 
@@ -97,7 +97,7 @@ What they show and look at:
    would take a detail of how the thing works, it is cut, not corrected. A small addition to a feature
    earns no line of its own, only a feature on the scale of cannons or dollars does. Most changes to how
    something behaves find nothing to change, and that is the right outcome.
-2. **Write it**, if anything, as the [`helper-instructions`](../skills/helper-instructions/SKILL.md)
+2. **Write it**, if anything, as the [`gameplay-ai`](../skills/gameplay-ai/SKILL.md)
    skill says: true, a clause or a line, in plain words, minding the size of the part every reply sends.
 3. **Check it**: `npx vitest run tests/integration/scenarios/helper.test.ts`, then that skill's samplers.
    When what Claude is told changed, hear it answer questions about the feature, from each character it
@@ -115,4 +115,5 @@ What they show and look at:
   such things, since agents act on them and have no screen to learn from.
 - Helpers describe the game as a person in a browser meets it. What agents can do and read is the other
   rule's.
-- The `helper-instructions` skill says how these texts are written; this page says when they change.
+- The `gameplay-ai` skill says how these texts are written (and the pets', which it keeps too); this page
+  says when they change.

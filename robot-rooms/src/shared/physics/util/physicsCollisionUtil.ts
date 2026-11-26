@@ -186,29 +186,35 @@ function canClimbObstacle(physicsRoom: PhysicsRoom, object: PhysicsObject,
 
     const myHitbox = object.colliderState.hitbox;
     const myBottom = myPos.y - myHitbox.halfSize.y;
-    const obstacleTop = obstacle.hitbox.center.y + obstacle.hitbox.halfSize.y;
-    const heightToClimb = obstacleTop - myBottom;
-    if (heightToClimb > maxClimbableHeight || heightToClimb <= 0) // height constraint not met
+    let top = obstacle.hitbox.center.y + obstacle.hitbox.halfSize.y;
+    if (top - myBottom <= 0) // height constraint not met
         return false;
-    
-    // Is there room on top of the obstacle for me to stand?
-    const onTopCheckAABB: AABB3 = {
-        center: {x: myPos.x, y: obstacleTop + myHitbox.halfSize.y, z: myPos.z},
-        halfSize: {x: myHitbox.halfSize.x, y: myHitbox.halfSize.y, z: myHitbox.halfSize.z},
-    };
-    const onTopOverlaps = PhysicsColliderStateUtil.findOverlappingColliderStates(
-        physicsRoom, onTopCheckAABB);
-    let onTopBlocked = false;
-    onTopOverlaps.forEach((overlap) => {
-        if (overlap.colliderConfig.applyHardCollisionToOthers &&
-            !Geometry3DUtil.areAABBsEqual(overlap.hitbox, object.colliderState.hitbox))
-        {
-            onTopBlocked = true;
-        }
-    });
-    if (onTopBlocked)
-        return false;
-    return true;
+
+    // Is there room on top of the obstacle for me to stand? What stands on it in my way is climbed along with it, for
+    // as long as the top of the pile is within my reach (a wall two blocks high, for a body that climbs that much).
+    while (top - myBottom <= maxClimbableHeight)
+    {
+        const onTopCheckAABB: AABB3 = {
+            center: {x: myPos.x, y: top + myHitbox.halfSize.y, z: myPos.z},
+            halfSize: {x: myHitbox.halfSize.x, y: myHitbox.halfSize.y, z: myHitbox.halfSize.z},
+        };
+        const onTopOverlaps = PhysicsColliderStateUtil.findOverlappingColliderStates(
+            physicsRoom, onTopCheckAABB);
+        let lowestTopInTheWay = Infinity;
+        onTopOverlaps.forEach((overlap) => {
+            if (overlap.colliderConfig.applyHardCollisionToOthers &&
+                !Geometry3DUtil.areAABBsEqual(overlap.hitbox, object.colliderState.hitbox))
+            {
+                lowestTopInTheWay = Math.min(lowestTopInTheWay, overlap.hitbox.center.y + overlap.hitbox.halfSize.y);
+            }
+        });
+        if (lowestTopInTheWay == Infinity)
+            return true;
+        if (lowestTopInTheWay <= top)
+            return false;
+        top = lowestTopInTheWay;
+    }
+    return false;
 }
 
 export default PhysicsCollisionUtil;

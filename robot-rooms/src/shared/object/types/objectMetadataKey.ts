@@ -58,4 +58,15 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // A cannon's state, or a cannon ball's, as quantized characters: the first a switch a user may set (a cannon's,
     // on or off), the rest what the server alone writes as it plays them (see CannonStateUtil, CannonBallStateUtil).
     CannonState: 24,
+    // Who a pet is, or was, for one that is scrap: its traits as quantized characters, then its name (see
+    // PetIdentityUtil). Set as it is generated, and never again.
+    PetIdentity: 25,
+    // What a pet shows of itself as whoever plays it sets it (see PetShownStateUtil): what it is doing, its face, its
+    // battery indicator and its rust.
+    PetState: 26,
+    // How a pet the server plays is (see PetNeedsUtil), which the room keeps for it. No signal may set it.
+    PetNeeds: 27,
+    // On a player: the pets its user owns, each with how it was when last told (see PetRecordUtil), kept in their row
+    // between visits. A user sets only how their pets are; which pets it lists is the server's to change.
+    Pets: 28,
 }

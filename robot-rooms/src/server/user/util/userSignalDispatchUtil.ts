@@ -26,6 +26,11 @@ import EditRateLogUtil from "./editRateLogUtil";
 import UserBudgetUtil from "./userBudgetUtil";
 import PlayerMessageExpiryUtil from "./playerMessageExpiryUtil";
 import HelperAgentUtil from "../../agent/util/helperAgentUtil";
+import SetObjectPathSignal from "../../../shared/object/types/setObjectPathSignal";
+import InjectPetSignal from "../../../shared/object/types/injectPetSignal";
+import PetServerUtil from "../../object/util/petServerUtil";
+import PetPathServerUtil from "../../object/util/petPathServerUtil";
+import PetPlayUtil from "../../object/util/petPlayUtil";
 
 // Every signal a user may send, as it arrives over the wire, whoever sends it (a browser's socket or an AI agent),
 // so both pass the same throttle, budgets, checks and milestones. A handler resolves to false for a signal it drops.
@@ -38,8 +43,10 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         // A placement of something put in the room is an edit; anything else moves the user's player.
         if (signal.ignorePhysics)
         {
-            return edit(ctx, () => ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal),
-                () => ServerObjectManager.refuseSetObjectTransformSignal(ctx, signal));
+            return edit(ctx, () => {
+                ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal);
+                PetPlayUtil.noteObjectEdit(ctx.user.id, "objectChanged", signal.objectId);
+            }, () => ServerObjectManager.refuseSetObjectTransformSignal(ctx, signal));
         }
         if (!UserBudgetUtil.trySpend(ctx.user.id, "moves"))
             return false;
@@ -52,18 +59,24 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
     },
     addVoxelBlockSignal: (ctx, bufferState) => {
         const signal = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
-        return edit(ctx, () => ServerVoxelManager.onAddVoxelBlockSignalReceived(ctx, signal),
-            () => ServerVoxelManager.refuseAddVoxelBlockSignal(ctx, signal));
+        return edit(ctx, () => {
+            ServerVoxelManager.onAddVoxelBlockSignalReceived(ctx, signal);
+            PetPlayUtil.noteBlockEdit(ctx.user.id, "blockAdded", signal.quadIndex);
+        }, () => ServerVoxelManager.refuseAddVoxelBlockSignal(ctx, signal));
     },
     moveVoxelBlockSignal: (ctx, bufferState) => {
         const signal = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
-        return edit(ctx, () => ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx, signal),
-            () => ServerVoxelManager.refuseMoveVoxelBlockSignal(ctx, signal));
+        return edit(ctx, () => {
+            ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx, signal);
+            PetPlayUtil.noteBlockEdit(ctx.user.id, "blockAdded", signal.quadIndex);
+        }, () => ServerVoxelManager.refuseMoveVoxelBlockSignal(ctx, signal));
     },
     removeVoxelBlockSignal: (ctx, bufferState) => {
         const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
-        return edit(ctx, () => ServerVoxelManager.onRemoveVoxelBlockSignalReceived(ctx, signal),
-            () => ServerVoxelManager.refuseRemoveVoxelBlockSignal(ctx, signal));
+        return edit(ctx, () => {
+            ServerVoxelManager.onRemoveVoxelBlockSignalReceived(ctx, signal);
+            PetPlayUtil.noteBlockEdit(ctx.user.id, "blockRemoved", signal.quadIndex);
+        }, () => ServerVoxelManager.refuseRemoveVoxelBlockSignal(ctx, signal));
     },
     setVoxelQuadTextureSignal: (ctx, bufferState) => {
         const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
@@ -72,16 +85,34 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
     },
     addObjectSignal: (ctx, bufferState) => {
         const signal = AddObjectSignal.decode(bufferState) as AddObjectSignal;
-        return edit(ctx, () => ServerObjectManager.onAddObjectSignalReceived(ctx, signal),
-            () => ServerObjectManager.refuseAddObjectSignal(ctx, signal));
+        // A pet coming into the room after its owner is their browser's doing, not something they built.
+        if (PetServerUtil.isComingIn(ctx, signal))
+        {
+            return tellOfPet(ctx, () => ServerObjectManager.onAddObjectSignalReceived(ctx, signal),
+                () => ServerObjectManager.refuseAddObjectSignal(ctx, signal));
+        }
+        return edit(ctx, () => {
+            if (ServerObjectManager.onAddObjectSignalReceived(ctx, signal))
+                PetPlayUtil.noteObjectEdit(ctx.user.id, "objectAdded", signal.objectId);
+        }, () => ServerObjectManager.refuseAddObjectSignal(ctx, signal));
     },
     removeObjectSignal: (ctx, bufferState) => {
         const signal = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
-        return edit(ctx, () => ServerObjectManager.onRemoveObjectSignalReceived(ctx, signal),
-            () => ServerObjectManager.refuseRemoveObjectSignal(ctx, signal));
+        return edit(ctx, () => {
+            // Noted first, the object being what says where it happened.
+            PetPlayUtil.noteObjectEdit(ctx.user.id, "objectRemoved", signal.objectId);
+            ServerObjectManager.onRemoveObjectSignalReceived(ctx, signal);
+        }, () => ServerObjectManager.refuseRemoveObjectSignal(ctx, signal));
     },
     setObjectMetadataSignal: (ctx, bufferState) => {
         const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
+        // What a browser tells of a pet it plays arrives on this signal too (what the pet shows and says, how the
+        // user's pets are), and is neither an edit nor the user's speech.
+        if (PetServerUtil.isWordOfPet(ctx, signal))
+        {
+            return tellOfPet(ctx, () => ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal),
+                () => ServerObjectManager.refuseSetObjectMetadataSignal(ctx, signal));
+        }
         // What the user is busy with arrives on this signal too (Activity metadata), and is neither an edit nor speech.
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.Activity)
         {
@@ -94,8 +125,10 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         // Chat arrives on this signal too (SentMessage metadata), so it's counted as speech rather than an edit.
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage)
         {
-            return edit(ctx, () => ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal),
-                () => ServerObjectManager.refuseSetObjectMetadataSignal(ctx, signal));
+            return edit(ctx, () => {
+                if (ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal))
+                    PetPlayUtil.noteObjectEdit(ctx.user.id, "objectChanged", signal.objectId);
+            }, () => ServerObjectManager.refuseSetObjectMetadataSignal(ctx, signal));
         }
         EditRateLogUtil.note(ctx.user.id, "speech");
         if (!UserBudgetUtil.trySpend(ctx.user.id, "speech"))
@@ -104,6 +137,7 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
             PlayerMessageExpiryUtil.noteMessage(ctx.user.id);
         ServerAnalyticsManager.recordMilestone(ctx.user.id, FunnelMilestoneEnumMap.Chatted, ctx);
         HelperAgentUtil.hear(ctx.user.id, signal);
+        PetPlayUtil.hear(ctx.user.id, signal.metadataValue);
         return true;
     },
     requestRoomChangeSignal: async (ctx, bufferState) => {
@@ -118,6 +152,15 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
     buyItemSignal: async (ctx, bufferState) => {
         await ServerInventoryManager.buyItem(ctx, (BuyItemSignal.decode(bufferState) as BuyItemSignal).itemType);
         return true;
+    },
+    setObjectPathSignal: (ctx, bufferState) => {
+        const signal = SetObjectPathSignal.decode(bufferState) as SetObjectPathSignal;
+        return tellOfPet(ctx, () => PetPathServerUtil.onSetObjectPathSignalReceived(ctx, signal));
+    },
+    // Paid for in dollars as it is done, and from the edit budget, though it builds nothing.
+    injectPetSignal: (ctx, bufferState) => {
+        const signal = InjectPetSignal.decode(bufferState) as InjectPetSignal;
+        return UserBudgetUtil.trySpend(ctx.user.id, "edit") && PetServerUtil.onInjectPetSignalReceived(ctx, signal);
     },
 };
 
@@ -163,6 +206,19 @@ function edit(ctx: UserContext, handle: () => void, refuse: () => void): boolean
     }
     handle();
     ServerAnalyticsManager.recordMilestone(ctx.user.id, FunnelMilestoneEnumMap.Built, ctx);
+    return true;
+}
+
+// What a browser tells of a pet it plays is paid for from a budget of its own, and is no edit of the user's: it counts
+// toward nothing they did. One it can't pay for is answered as a refused edit is, where the browser has applied it.
+function tellOfPet(ctx: UserContext, handle: () => void, refuse?: () => void): boolean
+{
+    if (!UserBudgetUtil.trySpend(ctx.user.id, "petSignals"))
+    {
+        refuse?.();
+        return false;
+    }
+    handle();
     return true;
 }
 

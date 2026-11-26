@@ -23,7 +23,7 @@ vi.stubGlobal("window", {
 });
 
 // An element as far as scrolling goes: what its style lets it do, and how its contents fit its box.
-class FakeElement
+class FakeElement extends EventTarget
 {
     parentElement: FakeElement | null = null;
     overflowX = "visible";
@@ -39,6 +39,7 @@ class FakeElement
 
     constructor(init: Partial<FakeElement> = {})
     {
+        super();
         Object.assign(this, init);
     }
 

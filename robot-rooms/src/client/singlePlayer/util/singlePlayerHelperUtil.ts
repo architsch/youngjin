@@ -12,6 +12,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMet
 import { SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS } from "../../../shared/object/util/helperBehaviorUtil";
+import PetListenerUtil from "../../../shared/object/util/petListenerUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
@@ -125,8 +126,9 @@ function hear(text: string, now: number): boolean
     const user = App.getUser();
     const room = App.getCurrentRoom();
     const me = getMyPosition();
-    const helper = (me == undefined) ? undefined
-        : HelperBehaviorUtil.pickListener([...helpers.values()], text, me, getMyFacing());
+    const helper = (me == undefined || room == undefined) ? undefined
+        : HelperBehaviorUtil.pickListener([...helpers.values()], text, me, getMyFacing(),
+            PetListenerUtil.find(room, text, me)).helper;
     if (helper == undefined || user == undefined || room == undefined)
         return false;
     helper.lines.push(text);
@@ -158,9 +160,11 @@ function isSaying(room: Room, text: string): boolean
 function waitOnTypist(now: number): void
 {
     const user = App.getUser();
+    const room = App.getCurrentRoom();
     const me = getMyPosition();
-    const listener = (user == undefined || me == undefined || !chatTypingObservable.peek()) ? undefined
-        : HelperBehaviorUtil.pickListener([...helpers.values()], "", me, getMyFacing());
+    const listener = (user == undefined || room == undefined || me == undefined || !chatTypingObservable.peek()) ? undefined
+        : HelperBehaviorUtil.pickListener([...helpers.values()], "", me, getMyFacing(),
+            PetListenerUtil.find(room, "", me)).helper;
     for (const helper of helpers.values())
         HelperBehaviorUtil.waitFor(helper, (helper === listener) ? user?.id : undefined, now);
 }

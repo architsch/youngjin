@@ -7,6 +7,7 @@ import { IndexedCompositionCodec } from "../types/compositionCodec/indexedCompos
 import { FramedPanelCompositionCodec } from "../types/compositionCodec/framedPanelCompositionCodec";
 import { CannonCompositionCodec } from "../types/compositionCodec/cannonCompositionCodec";
 import { CannonBallCompositionCodec } from "../types/compositionCodec/cannonBallCompositionCodec";
+import { PetCompositionCodec } from "../types/compositionCodec/petCompositionCodec";
 
 export const InstancedMeshCompositionCodecMap: {[codecType: number]: InstancedMeshCompositionCodec} = {
     [InstancedMeshCompositionCodecTypeEnumMap.Default]: DefaultCompositionCodec,
@@ -16,4 +17,5 @@ export const InstancedMeshCompositionCodecMap: {[codecType: number]: InstancedMe
     [InstancedMeshCompositionCodecTypeEnumMap.FramedPanel]: FramedPanelCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Cannon]: CannonCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.CannonBall]: CannonBallCompositionCodec,
+    [InstancedMeshCompositionCodecTypeEnumMap.Pet]: PetCompositionCodec,
 }

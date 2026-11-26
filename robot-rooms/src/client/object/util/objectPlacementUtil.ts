@@ -40,6 +40,12 @@ import PropObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/
 import MirrorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import PetIdentity from "../../../shared/object/types/petIdentity";
+import PetIdentityUtil from "../../../shared/object/util/petIdentityUtil";
+import PetBodyUtil from "../../../shared/object/util/petBodyUtil";
+import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
+import ObjectPriceUtil from "../../../shared/object/util/objectPriceUtil";
+import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
@@ -51,6 +57,13 @@ const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+const petTypeIndex = ObjectTypeConfigMap.getIndexByType("Pet");
+const serverPetTypeIndex = ObjectTypeConfigMap.getIndexByType("ServerPet");
+
+// A pet as good as any, for asking whether one could be generated before it has a name.
+const PLACEHOLDER_PET_IDENTITY: PetIdentity = {name: "Pet",
+    traits: {dependence: 1, sociability: 1, aggressiveness: 1, bravery: 1, curiosity: 1, zodiac: 0}, fixedHealthLevel: 0,
+    fixedEnergyLevel: 0, colorIndex: 0};
 
 // What a new label says, so it shows (and can be clicked) before anything is written on it.
 const NEW_LABEL_TEXT = "Label";
@@ -184,6 +197,32 @@ const ObjectPlacementUtil =
         if (tr != null)
             await addObject(volumeTypeIndex, tr, {}, true);
     },
+    // Whether the pets the user generates are the room's to keep, at a health and a charge that stay where they are,
+    // rather than theirs to take along: an admin's are (see ServerPetObjectTypeConfig).
+    generatesRoomPets: (): boolean =>
+    {
+        return RoomValidationUtil.userIsAdmin(App.getUser());
+    },
+    // Whether a pet can be generated standing on the clicked face: a floor's, with room over it.
+    canAddPet: (selection: VoxelQuadSelection): boolean =>
+    {
+        const fixed = ObjectPlacementUtil.generatesRoomPets() ? 1 : 0;
+        const identity = {...PLACEHOLDER_PET_IDENTITY, fixedHealthLevel: fixed, fixedEnergyLevel: fixed};
+        return getPlaceablePetTransform(selection, getPetMetadata(identity)) !== null;
+    },
+    // A pet of that name and nature, bought as it is added (see PetServerUtil), standing on the clicked floor and
+    // looking at the user. Its object's id, if it was added.
+    tryAddPet: async (selection: VoxelQuadSelection, identity: PetIdentity): Promise<string | undefined> =>
+    {
+        const metadata = getPetMetadata(identity);
+        const tr = getPlaceablePetTransform(selection, metadata);
+        return (tr == null) ? undefined : await addObject(getGeneratedPetTypeIndex(), tr, metadata);
+    },
+}
+
+function getGeneratedPetTypeIndex(): number
+{
+    return ObjectPlacementUtil.generatesRoomPets() ? serverPetTypeIndex : petTypeIndex;
 }
 
 // Placement transform for an object attached to the clicked face, or null if its type can't face that way
@@ -264,6 +303,35 @@ function getPlaceableVolumeTransform(selection: VoxelQuadSelection): ObjectTrans
         volumeTypeIndex, ObjectIdUtil.generateRandomObjectId(), tr)) ? tr : null;
 }
 
+// Where a pet generated from the clicked face stands, or null if it can't: only a face that looks up is stood on, and
+// the pet's middle is half its height over it. It looks toward the user's own player.
+function getPlaceablePetTransform(selection: VoxelQuadSelection, metadata: ObjectMetadata): ObjectTransform | null
+{
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectAddition))
+        return null;
+    const room = App.getCurrentRoom();
+    if (!room)
+        return null;
+    const user = App.getUser();
+
+    const {center, dir} = getClickedFace(selection);
+    if (dir.y < 0.5)
+        return null;
+    const pos = PetBodyUtil.getStandingPos(center);
+    const player = ClientObjectManager.getMyPlayer();
+    const toward = (player == undefined) ? {x: 0, y: 0, z: 1}
+        : {x: player.position.x - pos.x, y: 0, z: player.position.z - pos.z};
+    const facing = (Math.hypot(toward.x, toward.z) > 0.01) ? NpcFacingUtil.getDegrees(toward) : 0;
+    const tr = new ObjectTransform(pos, PetBodyUtil.getDir(facing), {...UNIT_VEC3});
+    return ObjectUpdateUtil.canAddObject(user, room, new AddObjectSignal(room.id, user.id, user.userName,
+        getGeneratedPetTypeIndex(), ObjectIdUtil.generateRandomObjectId(), tr, metadata)) ? tr : null;
+}
+
+function getPetMetadata(identity: PetIdentity): ObjectMetadata
+{
+    return {[ObjectMetadataKeyEnumMap.PetIdentity]: new EncodableByteString(PetIdentityUtil.encode(identity))};
+}
+
 function getPropMetadata(imagePath: string, quarterTurns: number): ObjectMetadata
 {
     return {
@@ -281,9 +349,10 @@ function getUprightQuarterTurns(selection: VoxelQuadSelection): number
         PointerCoordUtil.projectPoint);
 }
 
-// selectIt: leaves the new object selected whatever its type's panels, for one that is finished by hand.
+// selectIt: leaves the new object selected whatever its type's panels, for one that is finished by hand. The new
+// object's id, if it was added.
 async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata: ObjectMetadata,
-    selectIt: boolean = false)
+    selectIt: boolean = false): Promise<string | undefined>
 {
     try {
         const room = App.getCurrentRoom()!;
@@ -300,7 +369,7 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
             // What it costs the server takes as it adds it (see ServerObjectManager); the count shows it spent.
-            const price = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).price ?? 0;
+            const price = ObjectPriceUtil.getPrice(room, signal);
             if (price > 0)
                 dollarsSpentObservable.set(price);
             VoxelQuadSelection.unselect();
@@ -315,10 +384,12 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
                 objectInstalledObservable.set(objectId);
             RoomEditUtil.record(ClientEventType.ManuallyAddedObject, room,
                 {redo: [signal], undo: [RoomEditUtil.getUndoSignal(room, signal)], selectionBefore});
+            return objectId;
         }
     } catch (err) {
         console.error(`Exception while trying to add an object from a voxelQuad :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }
+    return undefined;
 }
 
 export default ObjectPlacementUtil;

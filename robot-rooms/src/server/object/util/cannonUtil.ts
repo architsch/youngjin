@@ -15,6 +15,7 @@ import CannonAimUtil from "../../../shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import PhysicsSphereUtil from "../../../shared/physics/util/physicsSphereUtil";
+import PetOwnerUtil from "../../../shared/object/util/petOwnerUtil";
 import Room from "../../../shared/room/types/room";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
@@ -257,7 +258,7 @@ function getNearestPlayer(cannon: AddObjectSignal, players: AddObjectSignal[]): 
 
 // Whether a cannon may fire at a player: in range and not too near, where its barrel tilts to, and with nothing
 // between the barrel's mouth, pointed at their middle, and them, but what a ball bounces off (a mirror, an NPC, another
-// cannon), which hides nobody from it.
+// cannon) and pets, none of which hides anybody from it: a pet in the way takes the ball instead.
 function mayFireAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal): boolean
 {
     const {pos, dir} = cannon.transform;
@@ -276,8 +277,11 @@ function mayFireAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal)
         const struck = PhysicsManager.castSphere(room.id, muzzle, middle, 0, lookedPast);
         if (struck == undefined || struck.object?.objectId == player.objectId)
             return true;
-        if (struck.object == undefined || !PhysicsSphereUtil.bounces(struck.object))
+        if (struck.object == undefined || !(PhysicsSphereUtil.bounces(struck.object)
+            || PetOwnerUtil.isPet(room.objectById[struck.object.objectId])))
+        {
             return false;
+        }
         lookedPast.add(struck.object.objectId);
     }
 }

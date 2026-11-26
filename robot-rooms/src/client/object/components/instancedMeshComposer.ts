@@ -1,5 +1,6 @@
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EMISSIVE_MATERIAL_ID, INSTANCED_TIN_MATERIAL_ID,
+    INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
@@ -42,6 +43,9 @@ export default class InstancedMeshComposer extends GameObjectComponent
     // Notified after every decode, for owners that place their own drawing by the composition (e.g. a
     // canvas's picture inside its frame). Per object, so a listener hears only its own composer.
     readonly partsRebuiltObservable = new Observable<InstancedMeshComposer>(this);
+    // Notified each time its instances are put where the object now is, for owners whose own instances lie on its
+    // parts (what is printed on a pet): placed right then, from the same matrices, they never part from them by a frame.
+    readonly instancesPlacedObservable = new Observable<InstancedMeshComposer>(this);
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
@@ -317,7 +321,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     part.color!.x, part.color!.y, part.color!.z);
             }
 
-            // In addition to the instance color: wood parts also carry moulding params.
+            // In addition to the instance color: wood parts also carry moulding params, tin parts how aged they are,
+            // and emissive parts what they draw (as they stand, for a part that says nothing of it).
             if (part.materialId == INSTANCED_WOOD_MATERIAL_ID)
             {
                 this.instancedMeshGraphics.updateInstanceMouldingParams(
@@ -325,6 +330,10 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     part.mouldingColor!.x, part.mouldingColor!.y, part.mouldingColor!.z,
                     part.mouldingThickness!, part.mouldingIsConvex!);
             }
+            else if (part.materialId == INSTANCED_TIN_MATERIAL_ID)
+                this.instancedMeshGraphics.updateInstanceRust(instancedMeshId, instanceId, part.rust ?? 0);
+            else if (part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)
+                this.instancedMeshGraphics.updateInstanceGlyph(instancedMeshId, instanceId, part.glyph, part.dims == true);
         }
 
         // Return obsolete instances
@@ -343,6 +352,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         }
 
         this.updateState = "upToDate";
+        this.instancesPlacedObservable.notify();
     }
 }
 

@@ -5,9 +5,10 @@ import AudioStream from "./audioStream";
 // streamed from files of their own.
 export default interface AudioBundleInfo
 {
-    // Under the static site's assets; empty while the bundle holds no clip, and there is no file.
+    // Under the static site's assets, in a file named by the version; empty while the bundle holds no clip, and there is
+    // no file.
     path: string;
-    // Changes whenever the file does, so that a cached copy of an older file is never cut by a newer map.
+    // A hash of what the bundle holds: a new one is a new file, so a build still deployed goes on cutting its own.
     version: string;
     // Where the click lies that shows how much a decoder shifts the clips (see AudioBundleUtil.findMarkerOffset).
     markerTime: number;

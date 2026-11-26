@@ -13,7 +13,8 @@ const SpeakerActivityUtil =
     // Whether it shows in place of the speaker's words, rather than beside them.
     replacesWords: (activity: SpeakerActivity): boolean =>
     {
-        return activity == SpeakerActivityEnumMap.Editing || activity == SpeakerActivityEnumMap.Reading;
+        return activity == SpeakerActivityEnumMap.Editing || activity == SpeakerActivityEnumMap.Reading
+            || activity == SpeakerActivityEnumMap.Away;
     },
     canonicalize: (rawValue: string): SpeakerActivity =>
     {

@@ -43,7 +43,7 @@ const MOST_TIMES = Math.floor((EncodableRaw4ByteNumber.MAX_VALUE - HELD) / CHEAT
 function contextOf(userType: number): UserContext & {told: string[]}
 {
     const told: string[] = [];
-    return {user: new User("someone", "someone", userType, ""), inventory: {[DOLLAR]: HELD}, told,
+    return {user: new User("someone", "someone", userType, "", ""), inventory: {[DOLLAR]: HELD}, told,
         addPendingSignalToUser: (signalType: string) => { told.push(signalType); }} as unknown as UserContext & {told: string[]};
 }
 

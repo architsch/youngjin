@@ -20,6 +20,8 @@ import ObjectObstacleUtil from "./objectObstacleUtil";
 // How far from where a door puts its arrivals a player still stands there: more than a stored position is off by (see
 // ObjectTransform).
 const AT_DOOR_DISTANCE = 0.01;
+// How far off the line of a walk out of a door a player on it may be: bodies in the doorway push one another a little.
+const ON_WALK_DISTANCE = 0.3;
 // A body that only touches a block isn't in it.
 const CLEARANCE_MARGIN = 0.01;
 const BODY_HALF_SIZE: Vec3 = {x: PLAYER_RADIUS_XZ - CLEARANCE_MARGIN, y: 0.5 * PLAYER_HEIGHT - CLEARANCE_MARGIN,
@@ -49,6 +51,23 @@ const DoorEntranceUtil =
         return Object.values(room.objectById).find(obj => obj.objectTypeIndex == doorTypeIndex
             && Vector3DUtil.distSqr(getTransformBehind(obj).pos, pos) < AT_DOOR_DISTANCE * AT_DOOR_DISTANCE);
     },
+    // The walk out of a door that a player put down behind it makes, as their middle goes, wherever along it they are
+    // by now (whoever asks may come to it late); undefined for one who is on no such walk.
+    getWalk: (room: Room, pos: Vec3): {from: Vec3, to: Vec3} | undefined =>
+    {
+        let nearest: {from: Vec3, to: Vec3, distance: number} | undefined = undefined;
+        for (const obj of Object.values(room.objectById))
+        {
+            if (obj.objectTypeIndex != doorTypeIndex)
+                continue;
+            const from = getTransformBehind(obj).pos;
+            const to = getWalkEnd(obj);
+            const distance = getDistanceToSegment(pos, from, to);
+            if (distance <= ON_WALK_DISTANCE && (nearest == undefined || distance < nearest.distance))
+                nearest = {from, to, distance};
+        }
+        return (nearest == undefined) ? undefined : {from: nearest.from, to: nearest.to};
+    },
 }
 
 // Behind the door's face, on its floor, facing into the room. Door and player origins are at mid-height; the player's
@@ -60,6 +79,15 @@ function getTransformBehind(door: AddObjectSignal): ObjectTransform
     return new ObjectTransform(
         {x: pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR, y: floorY + 0.5 * PLAYER_HEIGHT, z: pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR},
         {x: -dir.x, y: 0, z: -dir.z}, {...UNIT_VEC3});
+}
+
+function getDistanceToSegment(pos: Vec3, from: Vec3, to: Vec3): number
+{
+    const along = Vector3DUtil.subtract(to, from);
+    const lengthSqr = Vector3DUtil.dot(along, along);
+    const share = (lengthSqr < 1e-9) ? 0
+        : Math.min(1, Math.max(0, Vector3DUtil.dot(Vector3DUtil.subtract(pos, from), along) / lengthSqr));
+    return Math.sqrt(Vector3DUtil.distSqr(pos, Vector3DUtil.add(from, Vector3DUtil.scale(along, share))));
 }
 
 // Where the middle of a body walking out of the door gets to.

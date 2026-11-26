@@ -57,11 +57,22 @@ export default class WorldSpaceOutlineBox
         this.group.visible = visible;
     }
 
+    isVisible(): boolean
+    {
+        return this.group.visible;
+    }
+
     // Line widths are in world units, so the group's scale is the box's own size.
     setBox(center: Vec3, size: Vec3): void
     {
         this.group.position.set(center.x, center.y, center.z);
         this.group.scale.set(size.x, size.y, size.z);
+    }
+
+    // The way the box is turned, for one that isn't square to the room.
+    setOrientation(quaternion: THREE.Quaternion): void
+    {
+        this.group.quaternion.copy(quaternion);
     }
 
     // color at a brightness (0..1), with or without the glow around the line.

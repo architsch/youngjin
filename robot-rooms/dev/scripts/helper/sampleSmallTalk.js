@@ -1,5 +1,5 @@
 // Prints chats two helpers might have with each other (see HelperSmallTalkUtil), from their fixed words, each line with
-// how long it shows: to read the small talk after changing it (see the helper-instructions skill). No model is asked, so
+// how long it shows: to read the small talk after changing it (see the gameplay-ai skill). No model is asked, so
 // it costs nothing:
 //
 //   node dev/scripts/helper/sampleSmallTalk.js [--pair=jester,sage] [--count=2]

@@ -24,11 +24,17 @@ export const ORBIT_SIGHT_CONE_RADIUS_PER_DISTANCE = 0.3;
 // for the next to be added from (see ObjectPlacementUtil).
 export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
 
-// Where the selection tools show a sub-panel (an object's, see EditOptionsProps; a face's chooser, see
-// VoxelQuadPlacementOptions). True shows it beneath the tool row, whose buttons toggle between panels that have no
-// close button: an object's tools always show one, and a new object's carry on from the chooser it was picked in.
-// False raises it in the tool row's place until it is closed. A new canvas's tools open on its frame list either way.
+// Where the selection tools show an object's sub-panel (see EditOptionsProps). True shows it beneath the tool row,
+// whose buttons toggle between panels that have no close button: an object's tools always show one, and a new
+// object's carry on from the chooser it was picked in. False raises it in the tool row's place until it is closed. A
+// face's chooser takes the row's place either way, with a close button (see VoxelQuadPlacementOptions), and a new
+// canvas's tools open on its frame list either way.
 export const SUB_PANELS_BENEATH_SELECTION_TOOLS = true;
+
+// How a selected face offers what can be added to it (see VoxelQuadPlacementOptions). True groups the add buttons by
+// kind, behind three menu buttons in the tool row, each raising its own in a column over it. False lays every add
+// button out in the row itself. (The helpers tell people of the menus; see HELPER_GUIDE.)
+export const ADD_BUTTONS_IN_SUBMENUS = true;
 
 // The selection's outline, and what it and its handles turn while a drag of them is blocked (see
 // selectionEditBlockedObservable).

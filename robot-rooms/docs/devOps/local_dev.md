@@ -3,7 +3,7 @@
 Every command here runs in this project's folder, `robot-rooms/`, and the paths these pages give are relative to it, but for the static site's `public/`, the license files, `.github/` and `.claude/`, which are at the repository's root. So is the site's own generator, with its templates (the repository's `ssg/`), which is no part of this project: the root `CLAUDE.md` gives its commands.
 
 ## Prerequisites
-1. `gcloud auth application-default login`. `devRunner.js` reads secrets from Secret Manager with these credentials (see [firebase.md](firebase.md)).
+1. `gcloud auth application-default login`. `devRunner.js` and the reply samplers read secrets from Secret Manager with these credentials (`dev/scripts/lib/secrets.js`; see [firebase.md](firebase.md)).
 2. `npm install -g firebase-tools pm2`. Both are global CLIs, so **switching Node.js versions strands them and breaks `npm run dev`**. Reinstall them after a switch (see [maintenance.md](vps/maintenance.md#global-clis-do-not-survive-a-nodejs-switch)).
 3. A JDK on `PATH` (the Firestore and Storage emulators run on the JVM).
 4. LAME on `PATH` (`brew install lame`), but only to rebuild the audio bundle once a clip changes; SSG fails without it then (see [audio.md](../audio/audio.md)).
@@ -23,7 +23,7 @@ Open `http://127.0.0.1:3000`. Stop with `Ctrl+C`, then run `npm stop`.
 
 SSG here builds the game's static content alone (its error pages and the assets it loads). The dev server also stands in for the static site, serving `public/` as it is, so a page of the site shows a changed source only once the site is built again (`npm run build` in the repository's `ssg/`).
 
-AI agents connect at `http://127.0.0.1:3000/mcp`. Helpers only greet unless `ANTHROPIC_API_KEY` is in the environment `npm run dev` starts from, since `devRunner.js` doesn't load it: `ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" npm run dev`. Replies then spend the small non-public budget (see [firebase.md](firebase.md#runtime-secrets)), and `ANTHROPIC_BASE_URL` points them at a stand-in instead. `node dev/scripts/helper/sampleHelperReplies.js` hears each personality without a server.
+AI agents connect at `http://127.0.0.1:3000/mcp`. Helpers and pets answer through Claude as on the VPS, since `devRunner.js` loads `ANTHROPIC_API_KEY` with the other secrets; their replies spend the helpers' real API credit, though the daily cap counts only what this server's emulated database has seen (see [firebase.md](firebase.md#runtime-secrets)). For a run that shouldn't spend, `SKIP_AI_REPLIES=true npm run dev` leaves the key out (helpers only greet, and pets answer in a fixed word or two), and `ANTHROPIC_BASE_URL` points replies at a stand-in instead. `node dev/scripts/helper/sampleHelperReplies.js` hears each personality without a server, and `node dev/scripts/helper/samplePetReplies.js` a few pets, each loading the key the same way unless it is in the environment.
 
 ### If the emulator ports stay open
 `Ctrl+C` signals the whole process group. `npm stop` alone does not: it frees port 3000, but the emulators keep 8080, 9199, 4400, 4500, 9150 and 4000. To end a detached run the way `Ctrl+C` would:
@@ -49,4 +49,4 @@ Use SIGINT or SIGTERM, never SIGKILL, which orphans the Java emulators. E2E runs
 The emulator DB is empty on every fresh start, but browser cookies persist. The server stamps each browser with a boot id (`thingspool_dev_boot_id` cookie) that matches a marker document in the emulated DB. After a full restart the marker is gone, so stale browsers have their auth cookies cleared. A hot reload keeps the marker, so sessions survive. Dev only.
 
 ## Committing
-Run `npm run beforeCommit` (so production bundles and the game's static content are committed), then commit and push. The pre-commit hook checks the bundles and runs the integration tests; it also checks the site's pages and runs its generator's tests, so `npm run build` in the repository's `ssg/` comes first when a source, a template or that generator changed.
+Run `npm run beforeCommit` (so production bundles and the game's static content are committed), then commit and push. The pre-commit hook checks the bundles, type-checks the tests and runs the integration tests; it also checks the site's pages and runs its generator's tests, so `npm run build` in the repository's `ssg/` comes first when a source, a template or that generator changed.

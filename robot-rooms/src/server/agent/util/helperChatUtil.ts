@@ -12,6 +12,7 @@ import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import { NpcPersonality } from "../../../shared/object/types/npcPersonality";
 import { HelperChatRefusal } from "../types/helperChatRefusal";
+import HelperChatTurn from "../types/helperChatTurn";
 import HelperChatUsage from "../types/helperChatUsage";
 import HelperConversation from "../types/helperConversation";
 import HelperIdentity from "../types/helperIdentity";
@@ -21,6 +22,8 @@ import HelperIdentity from "../types/helperIdentity";
 // every helper; kept short; and asked for only with what the reply needs: the rules, the guide and the knowledge
 // (cached, the same for every helper), who the helper is, the character it plays and its mood for the talk (see
 // helperPersonalities.ts), a few things on its mind (see helperTopics.ts), and the person's own recent lines with it.
+// What a pet says to whoever speaks to it is asked for here too (see write), from the same budget and within the same
+// limits.
 
 // Another base (a proxy, or a stand-in on a local stack) may be named as the Anthropic SDKs allow.
 const API_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
@@ -202,10 +205,8 @@ const HelperChatUtil =
             Object.assign(conversation, {personality: helper.personality, topics: pickTopics(helper.personality),
                 mood: pickMood(helper.personality)});
         conversation.lastAt = now;
-        replyTimesByUserID.set(userID, [...(replyTimesByUserID.get(userID) ?? []).filter(at => now - at < HOUR_IN_MS),
-            now]);
+        countReply(userID, now);
         conversation.turns.push({role: "user", content: line});
-        ++day.replies;
 
         const text = await ask(helper, conversation);
         if (text == undefined)
@@ -216,6 +217,23 @@ const HelperChatUtil =
         conversation.turns.push({role: "assistant", content: text});
         conversation.turns.splice(0, Math.max(0, conversation.turns.length - MAX_REMEMBERED_TURNS));
         return text;
+    },
+    // What Claude writes for another of the game's speakers (a pet; see PetChatUtil), told who it is and how to talk,
+    // to the talk so far, on one line: paid for from the same day's budget as a helper's reply, and counted in the same
+    // hour of whoever it is for (callers ask getRefusal first). Undefined if nothing could be had.
+    write: async (userID: string, system: string, turns: HelperChatTurn[], maxOutputTokens: number): Promise<string | undefined> =>
+    {
+        countReply(userID, Date.now());
+        try
+        {
+            const written = await send([{type: "text", text: system}], turns, maxOutputTokens);
+            return written.length > 0 ? written : undefined;
+        }
+        catch (err)
+        {
+            logFailure(err);
+            return undefined;
+        }
     },
     // Saves what was spent since the last time: when asked to now, else at most once in SAVE_INTERVAL_MS.
     saveSpending: async (now: boolean = false): Promise<void> =>
@@ -285,16 +303,27 @@ async function ask(helper: HelperIdentity, conversation: HelperConversation): Pr
     }
     catch (err)
     {
-        if (Date.now() - failureLoggedAt >= FAILURE_LOG_INTERVAL_MS)
-        {
-            failureLoggedAt = Date.now();
-            LogUtil.log("Helper reply failed", {error: ErrorUtil.getErrorMessage(err)}, "high", "error");
-        }
+        logFailure(err);
         return undefined;
     }
 }
 
-// What the model wrote, on one line, once paid for; with a note added to what the helper is told, if given.
+function logFailure(err: unknown): void
+{
+    if (Date.now() - failureLoggedAt < FAILURE_LOG_INTERVAL_MS)
+        return;
+    failureLoggedAt = Date.now();
+    LogUtil.log("Helper reply failed", {error: ErrorUtil.getErrorMessage(err)}, "high", "error");
+}
+
+// A reply about to be asked for counts among today's, and in the hour of whoever it is for.
+function countReply(userID: string, now: number): void
+{
+    replyTimesByUserID.set(userID, [...(replyTimesByUserID.get(userID) ?? []).filter(at => now - at < HOUR_IN_MS), now]);
+    ++day.replies;
+}
+
+// What the model wrote for a helper, on one line, once paid for; with a note added to what the helper is told, if given.
 async function request(helper: HelperIdentity, conversation: HelperConversation, note?: string): Promise<string>
 {
     const {turns, topics, mood} = conversation;
@@ -305,6 +334,13 @@ async function request(helper: HelperIdentity, conversation: HelperConversation,
         + (mood.length > 0 ? `\n\nYour mood today, for small talk: ${mood}.` : "")
         + (topics.length > 0 ? "\n\nOn your mind today, only for when a visitor leaves the subject to you:\n"
             + topics.map(topic => `- ${topic}`).join("\n") : "");
+    return await send([{type: "text", text: RULES, cache_control: {type: "ephemeral"}}, {type: "text", text: identity},
+        ...(note != undefined ? [{type: "text", text: note}] : [])], turns, MAX_OUTPUT_TOKENS);
+}
+
+// What the model wrote to a talk, told what its system blocks say, on one line, once paid for.
+async function send(system: object[], turns: HelperChatTurn[], maxOutputTokens: number): Promise<string>
+{
     const response = await fetch(`${API_BASE_URL}/v1/messages`, {
         method: "POST",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -312,11 +348,10 @@ async function request(helper: HelperIdentity, conversation: HelperConversation,
             "content-type": "application/json"},
         body: JSON.stringify({
             model: HELPER_MODEL,
-            max_tokens: MAX_OUTPUT_TOKENS,
+            max_tokens: maxOutputTokens,
             // The model thinks by default, out of the same max_tokens, which could leave a reply cut off unsaid.
             thinking: {type: "disabled"},
-            system: [{type: "text", text: RULES, cache_control: {type: "ephemeral"}}, {type: "text", text: identity},
-                ...(note != undefined ? [{type: "text", text: note}] : [])],
+            system,
             // Starting with the person, as the API asks, even once the oldest lines are forgotten.
             messages: turns.slice(turns.findIndex(turn => turn.role == "user")),
         }),

@@ -1,6 +1,6 @@
 # Integration Test Workflow
 
-`npm run test:integration` runs in Husky's `pre-commit` hook, last: after the hook's checks of the site's pages (the repository's `ssg/`, see the root `CLAUDE.md`) and of the bundles.
+`npm run test:integration` runs in Husky's `pre-commit` hook, last: after the hook's checks of the site's pages (the repository's `ssg/`, see the root `CLAUDE.md`) and of the bundles, and `npm run test:types`, which type-checks the tests (Vitest itself never does) with whatever they import.
 
 | Command | Purpose |
 |---|---|

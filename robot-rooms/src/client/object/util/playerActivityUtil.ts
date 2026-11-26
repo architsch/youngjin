@@ -33,11 +33,13 @@ const PlayerActivityUtil =
     },
 }
 
-// Whatever takes the user away from the room comes first. Another tab is taken for reading, as nothing else can be told
+// Whatever takes the user away from the room comes first: a page they opened over it, or another tab or window in front
 // of it (only a hidden page counts: one in sight is the user's, focused or not).
 function getActivity(): SpeakerActivity
 {
-    if (webPageOpenObservable.peek() || document.visibilityState == "hidden")
+    if (document.visibilityState == "hidden")
+        return SpeakerActivityEnumMap.Away;
+    if (webPageOpenObservable.peek())
         return SpeakerActivityEnumMap.Reading;
     if (gameModeObservable.peek() == "edit")
         return SpeakerActivityEnumMap.Editing;

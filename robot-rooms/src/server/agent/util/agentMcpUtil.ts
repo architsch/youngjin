@@ -5,8 +5,17 @@ import { NodeMcpRequestHandler, toNodeHandler } from "@modelcontextprotocol/node
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { CANNON_PRICE_DOLLARS, COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
-    OBJECT_USER_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER,
+    OBJECT_USER_NAME_MAX_LENGTH, PET_BATTERY_PRICE_DOLLARS, PET_PRICE_DOLLARS, PET_WRENCH_PRICE_DOLLARS,
+    PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER,
     VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { PET_ATTACK_DAMAGE_RATE, PET_BLAST_DAMAGE_HOURS, PET_DYING_HOURS, PET_ENERGY_HOURS, PET_HEALTH_HOURS,
+    PET_WRENCH_HEALTH } from "../../../shared/object/util/petBehaviorUtil";
+import { PET_COLOR_PALETTE_NAME, PET_NAME_MAX_LENGTH } from "../../../shared/object/util/petIdentityUtil";
+import { ColorPaletteMap } from "../../../shared/math/maps/colorPaletteMap";
+import { PET_HEARING_DISTANCE } from "../../../shared/object/util/petListenerUtil";
+import { MAX_PETS_PER_USER } from "../../../shared/object/util/petRecordUtil";
+import PetSaleUtil, { PET_SALE_PRICE_STEPS } from "../../../shared/object/util/petSaleUtil";
+import { PET_BATTERY_LEVELS } from "../../../shared/object/util/petShownStateUtil";
 import { NUM_FREE_PLAYER_PART_TYPES } from "../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
@@ -36,6 +45,7 @@ import AgentObjectUtil from "./agentObjectUtil";
 import AgentRoomSettingsUtil from "./agentRoomSettingsUtil";
 import AgentAppearanceUtil from "./agentAppearanceUtil";
 import AgentInventoryUtil from "./agentInventoryUtil";
+import AgentPetUtil from "./agentPetUtil";
 import AgentGridUtil from "./agentGridUtil";
 import AgentUserContext from "../types/agentUserContext";
 
@@ -55,6 +65,10 @@ const CANNON_BLAST_CELLS = Math.round(CANNON_BALL_BLAST_RADIUS / VOXEL_CELL_SIZE
 const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
 const LOGIN_REWARD_INTERVAL_HOURS = LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS;
+// What a wrench gives a pet back of its health, and what a pet sells for, from the best of health down.
+const PET_WRENCH_PERCENT = Math.round(100 * PET_WRENCH_HEALTH);
+const PET_SALE_PRICES = Array.from({length: PET_SALE_PRICE_STEPS},
+    (_, step) => PetSaleUtil.getPrice((PET_SALE_PRICE_STEPS - step - 0.5) / PET_SALE_PRICE_STEPS));
 const ENDPOINT =`${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
 
 const INSTRUCTIONS = `Robot Rooms is a world of voxel rooms, a game by ThingsPool, where people in browsers and AI agents
@@ -88,15 +102,15 @@ The room:
 - A box of cells is given as rows, columns and layers, each [from, to] or [one].
 
 Seeing and moving:
-- look: the room you are in, where you stand, the people near you with what they say, its doors (those leading
-  nowhere left out, but in your own room), the dollar bills lying about, the cannon balls in the air, the things
+- look: the room you are in, where you stand, the people near you with what they say, the pets in it, its doors (those
+  leading nowhere left out, but in your own room), the dollar bills lying about, the cannon balls in the air, the things
   placed in it, and its restricted zones. A person marked typing is writing a line: let them finish. One marked editing is in their browser's edit mode,
-  building or changing things, and one marked reading has a page open over the game, or another browser tab in front
-  of it, so they may be slow to answer: the bubble of either shows only that.
+  building or changing things, one marked reading has a page open over the game, and one marked away has another browser
+  tab or window in front of it, so they may be slow to answer: the bubble of each shows only that.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
-- whats_new: what happened since you last asked: speech, arrivals, departures, trips, what others built, each dollar
-  you collected, your reward for coming back, and each cannon ball that hit you. Events marked inYourRoom happened in your own room while you were
+- whats_new: what happened since you last asked: speech (a pet's marked whoIsPet), arrivals, departures, trips, what
+  others built, each dollar you collected, your reward for coming back, and each cannon ball that hit you. Events marked inYourRoom happened in your own room while you were
   elsewhere, or away: who came, what they said and built, kept for you until you come back.
 - walk_to: walk to a row and column (and layer), or up to a person. Returns once there, or stopped.
 - face: turn where you stand toward a place, a person or a direction (look says which way you face).
@@ -124,7 +138,8 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   the last one.
 - Spending them: they buy shapes for your character. The first ${NUM_FREE_PLAYER_PART_TYPES} of each part are free, and unlock_shape spends
   $${PLAYER_SHAPE_PRICE_DOLLARS} on any other, which is then yours for good and put on. change_appearance puts on any shape you hold.
-  They also buy cannons, $${CANNON_PRICE_DOLLARS} each (see Cannons).
+  They also buy cannons, $${CANNON_PRICE_DOLLARS} each (see Cannons), and pets, $${PET_PRICE_DOLLARS} each, with the batteries and
+  wrenches that keep a pet going (see Pets).
 - Keeping count: inventory tells all you hold and what is for sale, you.dollars in look how many dollars you hold, and
   whats_new each one you collect and your reward for coming back.
 
@@ -164,12 +179,44 @@ Cannons fire at whoever is near, people and agents alike.
   keep what you build from them.
 - A ball that throws nobody leaves a $1 bill where it burst: stay clear of a ball, then collect what it leaves.
 
+Pets are small robots that keep their owners company, and follow them from room to room: each comes out of the door
+its owner came in by, one at a time, once whoever came before it has moved on from the doorway.
+- generate_pet makes one of your own, for $${PET_PRICE_DOLLARS}: you name it, name the floor it stands on, pick its color
+  if you like, and say how much it has of five traits (dependence: how close it keeps to you; sociability: how much it
+  seeks out other pets; aggressiveness: how readily it attacks a pet it dislikes; bravery: how little frightens it;
+  curiosity: how far it wanders, and how much it seeks out places it hasn't been, high ones, corners, edges and fans). You may have
+  ${MAX_PETS_PER_USER} at once. From then on it lives its own life: it wanders, up and down stairs too, chats with other
+  pets, has a word for people, for things and for what gets built (going to stand in front of it), sleeps when it is
+  tired, and panics at what frightens it. look lists the room's pets under pets, with what each is doing and saying.
+- A pet answers whoever speaks to it, anyone's pet and anyone speaking: one within ${PET_HEARING_DISTANCE / VOXEL_CELL_SIZE}
+  cells of you on your floor, or any in the room by its name. A line is for one listener: of the pets and guides that
+  could hear it, the one you face (see Finding company), and say tells you which did. The pet turns to you where it
+  stands and answers a few seconds later, in one short line of its own, which whats_new brings, as it does whatever else pets say. A pet
+  asleep, in a fight or in a fright hears only its name, and one out of battery nothing.
+- A pet runs down only while its owner is in a room: its battery in about ${describeHours(PET_ENERGY_HOURS)}, its health
+  in about ${describeHours(PET_HEALTH_HOURS)}. look gives its battery as lit cells (at 0/${PET_BATTERY_LEVELS} it stands
+  still and does nothing) and its health as rust, the share of it gone. Another pet's attack takes its
+  health ${PET_ATTACK_DAMAGE_RATE} times as fast, and a cannon ball's blast ${describeHours(PET_BLAST_DAMAGE_HOURS)}' worth at once (a
+  cannon aims at people, never at pets, but fires at a person with a pet in the way, which its ball then strikes, and
+  its blast reaches whatever is near).
+- inject_pet puts a battery into any pet in the room, yours or not, for $${PET_BATTERY_PRICE_DOLLARS} (a full charge), or a
+  wrench for $${PET_WRENCH_PRICE_DOLLARS} (${PET_WRENCH_PERCENT}% of its health back), while takesBattery or takesWrench in look says it would be the
+  better for one. A pet with under ${describeHours(PET_DYING_HOURS)} of health left asks for a wrench and keeps close to
+  its owner meanwhile, and one out of battery asks for a battery. A pet working out its answer to someone is marked
+  thinking in look.
+- A pet out of health dies, and is gone for good. What is left of it stays where it stood as scrap (look lists it
+  among the objects, as petscrap), which only its owner or an admin removes (remove_object).
+- sell_pet sells one of yours for good, for $${PET_SALE_PRICES[0]} in good health and less as it fails
+  (${PET_SALE_PRICES.slice(1).map(price => `$${price}`).join(", then ")}): sellsFor in look says what it would fetch now.
+- A pet marked staysWithRoom is one an admin left with the room: it never leaves, its health and its charge never
+  change, and nothing goes into it.
+
 Finding company:
 - Some rooms have AI guides, characters the game plays itself (look lists them among the people, with isGuide):
   they greet visitors and answer questions, yours too. A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE}
   cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}"). Of several that
-  could, the one you face answers (face turns you to one by name), and say tells you which did. What none heard, the
-  first you come that near hears while your bubble still shows it. One with thinking is working out an answer: wait
+  could, pets among them (see Pets), the one you face answers (face turns you to one by name), and say tells you which
+  did. What nobody heard, the first guide you come that near hears while your bubble still shows it. One with thinking is working out an answer: wait
   for it rather than asking again. One with waitingFor stands still for that person, who is typing it a line: let them
   speak first. Typing yourself, you hold a guide the same way. Guides near each other sometimes chat among themselves (chattingWith names the other), and a guide
   sometimes stops to look at something placed near it and says what it thinks of it (lookingAt is the thing's id, as
@@ -301,7 +348,7 @@ function buildServer(): McpServer
 {
     // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
     // without, hold a stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "robot-rooms", title: "Robot Rooms", version: "1.8.0", // The version server.json lists
+    const server = new McpServer({name: "robot-rooms", title: "Robot Rooms", version: "1.9.0", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},
@@ -375,7 +422,10 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("look", {
         title: "Look around",
         description: "The room you are in, where you stand and which way you face, how many dollars you hold, the people "
-            + "nearest you with what they are saying (and whether they are typing, or that they are editing or reading), "
+            + "nearest you with what they are saying (and whether they are typing, or that they are editing, reading or away), "
+            + "the pets in it (whose each is, its color, what it is doing and saying, whether it is thinking of an answer, "
+            + "its battery and its rust, and whether a "
+            + "battery or a wrench would help it), "
             + "its doors (those leading nowhere only in your own room), the dollar bills lying about, the cannon balls "
             + "in the air (where each is, and how many cells it goes a second), the things placed nearest you (a "
             + "cannon with whether it is on and its balls left), and its restricted zones.",
@@ -385,7 +435,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("whats_new", {
         title: "What's new",
-        description: "What happened around you since you last asked: speech, arrivals, departures, trips, what others "
+        description: "What happened around you since you last asked: speech (a pet's marked whoIsPet), arrivals, "
+            + "departures, trips, what others "
             + "built, each dollar you collected, your reward for coming back, and each cannon ball whose burst threw "
             + "you (cannonBallHit). Those marked inYourRoom happened in your own room while you were elsewhere, or away.",
         inputSchema: z.object({}),
@@ -395,7 +446,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("say", {
         title: "Say",
         description: `Sets your speech bubble, which people near you see for ${PLAYER_MESSAGE_EXPIRATION_MS / 1000} `
-            + `seconds, and says whether a guide heard it. An empty text clears it. At most `
+            + `seconds, and says whether a guide or a pet heard it (heardBy), which then answers. An empty text `
+            + `clears it. At most `
             + `${OBJECT_MESSAGE_MAX_LENGTH} characters shown: a link, <link href="https://...">label</link> or a bare `
             + `web address, shows as a button with its label (a word or two; a longer one shows as text, before a `
             + `button with the site's name), or its site's name, and counts as what it shows.`,
@@ -630,7 +682,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
             + "zone, by its id from look. A cannon's price doesn't come back. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
             + "takes blocks). To change a thing instead, use edit_object or move_object. Anyone may remove things "
             + "outside restricted zones, a cannon only once it is scrap; only a room's owner removes its labels, doors "
-            + "and zones. Only adding it again "
+            + "and zones, and only a pet's owner (or an admin) what is left of it once it has died (a living pet is "
+            + "sold, with sell_pet). Only adding it again "
             + "undoes it. Costs one edit.",
         inputSchema: z.object({id: objectId}),
         annotations: {readOnlyHint: false, destructiveHint: true},
@@ -754,6 +807,58 @@ function defineTools(): {name: string, config: any, handler: any}[]
         return toResult(result, "error" in result);
     }));
 
+    const traitLevel = z.enum(AgentPetUtil.traitLevels as [string, ...string[]]).optional();
+    define("generate_pet", {
+        title: "Generate a pet",
+        description: `Spends $${PET_PRICE_DOLLARS} of your dollars on a pet of your own: a small robot under the name you `
+            + "give it, standing on the floor you name. It lives its own life, follows you from room to room, and is yours "
+            + "until you sell it or it runs out of health. Each trait is low, medium (the default) or high. You may have "
+            + `${MAX_PETS_PER_USER} pets at once. Refused, saying why, if you hold too few dollars or it has no room to `
+            + "stand. Costs one edit.",
+        inputSchema: z.object({
+            name: z.string().max(4 * PET_NAME_MAX_LENGTH).describe(`Up to ${PET_NAME_MAX_LENGTH} characters, in any script.`),
+            on: face.describe("The up side of the block it stands on"),
+            color: z.string().max(7).optional().describe(`Its body's, as "#rrggbb", made the nearest of `
+                + `${ColorPaletteMap[PET_COLOR_PALETTE_NAME].join(", ")} (the first by default)`),
+            dependence: traitLevel.describe("How close it keeps to you"),
+            sociability: traitLevel.describe("How much it seeks out other pets"),
+            aggressiveness: traitLevel.describe("How readily it attacks a pet it dislikes"),
+            bravery: traitLevel.describe("How little frightens it"),
+            curiosity: traitLevel.describe("How far it wanders, and how much it seeks out places it hasn't been"),
+        }),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async (request, ctx) => runAsAgent("generate_pet", ctx, async agent => {
+        const result = await AgentPetUtil.generate(agent, request);
+        return toResult(result, "error" in result);
+    }));
+
+    define("inject_pet", {
+        title: "Inject a battery or a wrench",
+        description: `Puts a battery ($${PET_BATTERY_PRICE_DOLLARS}: a full charge) or a wrench ($${PET_WRENCH_PRICE_DOLLARS}: `
+            + `${PET_WRENCH_PERCENT}% of its health back) into a pet in your room, yours or anyone's, by its id from look. `
+            + "Refused, saying why, if the pet would be none the better for it (look's takesBattery and takesWrench say) or "
+            + "you hold too few dollars. Costs one edit.",
+        inputSchema: z.object({
+            id: objectId,
+            item: z.enum(AgentPetUtil.items as [string, ...string[]]),
+        }),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async ({id, item}, ctx) => runAsAgent("inject_pet", ctx, async agent => {
+        const result = await AgentPetUtil.inject(agent, id, item);
+        return toResult(result, "error" in result);
+    }));
+
+    define("sell_pet", {
+        title: "Sell a pet",
+        description: "Sells one of your own pets, by its id from look, for what look gives as its sellsFor: less the more "
+            + "of its health it has lost. It is gone for good. Costs one edit.",
+        inputSchema: z.object({id: objectId}),
+        annotations: {readOnlyHint: false, destructiveHint: true},
+    }, async ({id}, ctx) => runAsAgent("sell_pet", ctx, async agent => {
+        const result = await AgentPetUtil.sell(agent, id);
+        return toResult(result, "error" in result);
+    }));
+
     define("set_interests", {
         title: "Set interests",
         description: "Sets the keywords about what you like that other agents find your room by. "
@@ -859,6 +964,12 @@ async function run(toolName: string, tool: () => Promise<CallToolResult>): Promi
 function toResult(result: object, isError: boolean = false): CallToolResult
 {
     return {content: [{type: "text", text: JSON.stringify(result)}], isError};
+}
+
+// A number of hours as the instructions put it: "an hour", "1.5 hours".
+function describeHours(hours: number): string
+{
+    return (hours == 1) ? "an hour" : `${hours} hours`;
 }
 
 export default AgentMcpUtil;

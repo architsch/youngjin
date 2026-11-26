@@ -1,4 +1,5 @@
 import { ComponentType } from "react";
+import Vec3 from "../../../../shared/math/types/vec3";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import Room from "../../../../shared/room/types/room";
 import User from "../../../../shared/user/types/user";
@@ -14,6 +15,13 @@ export default interface ObjectTypeClientConfig
 
     selection?: { // If this field is present, the object must be selectable (as long as the necessary conditions are met).
         canBeSelectedByUserInEditMode: (gameObject: GameObject, user: User, room: Room) => boolean;
+        // Whether a click selects the object in play mode too, where editOptions then take the chat input's place (see
+        // PlayModeSelectionUtil). Absent, it never does.
+        canBeSelectedByUserInPlayMode?: (gameObject: GameObject, user: User, room: Room) => boolean;
+        // The size of the box the selection outlines about the object's middle, turned as the object is: for a body
+        // that moves about, which a rectangle on the floor beneath it would show poorly. Absent, it is outlined by a
+        // rectangle (see ObjectSelection).
+        outlineBoxSize?: Vec3;
         editOptions?: ComponentType<EditOptionsProps>;
         // The sub-panels editOptions can raise, one at a time. Shown beneath its tools, they open on the first (see
         // SUB_PANELS_BENEATH_SELECTION_TOOLS).

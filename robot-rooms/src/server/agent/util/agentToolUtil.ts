@@ -38,6 +38,7 @@ import AgentSignalUtil from "./agentSignalUtil";
 import AgentRoomUtil from "./agentRoomUtil";
 import AgentGridUtil from "./agentGridUtil";
 import AgentObjectUtil from "./agentObjectUtil";
+import AgentPetUtil from "./agentPetUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
 import AgentBudgetUtil from "./agentBudgetUtil";
@@ -92,6 +93,7 @@ const AgentToolUtil =
                     typing: (activity == SpeakerActivityEnumMap.Typing) ? true : undefined,
                     editing: (activity == SpeakerActivityEnumMap.Editing) ? true : undefined,
                     reading: (activity == SpeakerActivityEnumMap.Reading) ? true : undefined,
+                    away: (activity == SpeakerActivityEnumMap.Away) ? true : undefined,
                 };
             });
         // The room's AI guides, which the server plays (see HelperAgentUtil).
@@ -159,6 +161,7 @@ const AgentToolUtil =
             you: {name: ctx.user.userName, at: AgentGridUtil.toGridPosition(myFeet), facing: getFacing(me),
                 saying: getSpeech(me), dollars: ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0},
             people,
+            pets: AgentPetUtil.describePets(room, ctx.user, myFeet),
             doors,
             bills,
             cannonBalls,
@@ -463,16 +466,21 @@ function getSpeech(obj: AddObjectSignal): string | undefined
     return text.length > 0 ? MessageLinkUtil.withControlsInWords(text) : undefined;
 }
 
-// Whether a guide in the room heard a line, which an agent can't otherwise tell from a guide slow to answer.
+// Whether a guide or a pet in the room heard a line, which an agent can't otherwise tell from one slow to answer.
 function describeHearing(ctx: AgentUserContext, room: Room, myPos: Vec3, text: string): object
 {
-    const guides = HelperAgentUtil.getHelpers(room.id);
-    if (guides.length == 0 || text.trim().length == 0)
+    if (text.trim().length == 0)
         return {};
-    const heardBy = HelperAgentUtil.getListenerName(ctx.user.id, text);
-    if (heardBy != undefined)
-        return {heardBy, note: "It answers in a few seconds: look shows it thinking until then, and whats_new brings "
-            + "its answer."};
+    const listener = HelperAgentUtil.getListener(ctx.user.id, text);
+    if (listener?.isPet)
+        return {heardBy: listener.name, note: "A pet: it turns to you and answers in a few seconds, in a short line "
+            + "of its own, which whats_new brings."};
+    if (listener != undefined)
+        return {heardBy: listener.name, note: "It answers in a few seconds: look shows it thinking until then, and "
+            + "whats_new brings its answer."};
+    const guides = HelperAgentUtil.getHelpers(room.id);
+    if (guides.length == 0)
+        return {};
     const myFeet = VoxelPathUtil.feetOf(myPos);
     const nearest = guides.map(guide => ({name: guide.name || "a guide", distance: distanceInVoxels(myFeet, guide.at)}))
         .sort((a, b) => a.distance - b.distance)[0];

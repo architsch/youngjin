@@ -6,8 +6,13 @@ import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import PhysicsColliderStateUtil from "../../../../shared/physics/util/physicsColliderStateUtil";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
+import { PetActionEnumMap } from "../../../../shared/object/types/petAction";
+import { PetInjectionEnumMap } from "../../../../shared/object/types/petInjection";
+import PetOwnerUtil from "../../../../shared/object/util/petOwnerUtil";
+import PetShownStateUtil from "../../../../shared/object/util/petShownStateUtil";
 import { cannonBallBounceObservable, cannonBallBurstObservable, cannonFiredObservable, cannonScrappedObservable,
-    objectCollectedObservable, objectEditObservable, voxelBlockEditObservable } from "../../../system/clientObservables";
+    objectCollectedObservable, objectEditObservable, petInjectedObservable, petSnoreObservable, petStrikeObservable,
+    voxelBlockEditObservable } from "../../../system/clientObservables";
 import ParticleSystem from "../particleSystem";
 
 // An attached object comes apart in small breaks about this far apart across its face, in world units, and never in
@@ -19,7 +24,8 @@ export const MAX_BREAKS = 24;
 // never calls the particle system. A block's removal plays one, as does someone else collecting a dollar bill, the
 // only thing there is to collect; the user's own collecting is a bill flying to their count, not an effect (see
 // DollarBillGameObject.onCollected). A cannon's shot, its ball's bounce and its ball's burst play one each, and its
-// turning to scrap a puff. An attached object taken away, by anyone or anything, comes apart all over its face; other
+// turning to scrap a puff. A pet plays one as something is put into it, as it rams another, at each breath it draws
+// asleep, and as it goes. An attached object taken away, by anyone or anything, comes apart all over its face; other
 // object edits are left unbound.
 const ParticleTriggerUtil =
 {
@@ -48,10 +54,29 @@ const ParticleTriggerUtil =
     {
         ParticleSystem.play("cannonPuff", wreck.position);
     },
-    // An NPC, which steps off a block rather than going with it, is nothing that comes apart.
+    onPetInjected: (given: {injection: number, position: Vec3}): void =>
+    {
+        ParticleSystem.play((given.injection == PetInjectionEnumMap.Battery) ? "petCharged" : "petRepaired", given.position);
+    },
+    onPetStrike: (strike: {position: Vec3}): void =>
+    {
+        ParticleSystem.play("petStrike", strike.position);
+    },
+    onPetSnore: (breath: {position: Vec3}): void =>
+    {
+        ParticleSystem.play("petSnore", breath.position);
+    },
+    // A pet taken away is beamed out, or, out of health, breaks down where it stood. An NPC, which steps off a block
+    // rather than going with it, is nothing that comes apart.
     onObjectEdit: (edit: {kind: "add" | "remove" | "change", object: AddObjectSignal}): void =>
     {
         const {kind, object} = edit;
+        if (kind == "remove" && PetOwnerUtil.isPet(object))
+        {
+            const dead = PetShownStateUtil.getObjectState(object).action == PetActionEnumMap.Dead;
+            ParticleSystem.play(dead ? "petDeath" : "petVanish", object.transform.pos);
+            return;
+        }
         const attachment = ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).attachment;
         if (kind != "remove" || attachment == undefined || attachment.stepsAside)
             return;
@@ -116,6 +141,9 @@ cannonFiredObservable.addListener("particleTriggerUtil", guarded(ParticleTrigger
 cannonBallBounceObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonBallBounce));
 cannonBallBurstObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonBallBurst));
 cannonScrappedObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonScrapped));
+petInjectedObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onPetInjected));
+petStrikeObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onPetStrike));
+petSnoreObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onPetSnore));
 objectEditObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onObjectEdit));
 
 export default ParticleTriggerUtil;
